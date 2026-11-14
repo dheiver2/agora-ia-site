@@ -110,6 +110,7 @@
               <li class="nav-item"><a class="nav-link" href="#" data-pg="seguindo" role="tab">Seguindo</a></li>
               <li class="nav-item"><a class="nav-link" href="#" data-pg="autoria" role="tab">Autoridade</a></li>
               <li class="nav-item"><a class="nav-link" href="#" data-pg="engajamento" role="tab">Engajamento</a></li>
+              <li class="nav-item"><a class="nav-link" href="#" data-pg="previsao" role="tab">Previsão</a></li>
               <li class="nav-item"><a class="nav-link" href="#" data-pg="alvos" role="tab">Alvos</a></li>
               <li class="nav-item"><a class="nav-link" href="#" data-pg="resultados" role="tab">Resultados</a></li>
               <li class="nav-item"><a class="nav-link" href="#" data-pg="itens" role="tab">Itens <span class="badge bg-secondary-lt ms-1" id="pg-itens-n"></span></a></li>
@@ -362,6 +363,18 @@
             <div class="card-body small" id="en-apoio"></div>
           </div></div>
           <div class="col-12"><div class="card">
+            <div class="card-header"><h3 class="card-title">Previsão até <span id="pv-data">09/12</span></h3>
+              <div class="card-actions text-secondary small" id="pv-sub">se o ritmo dos últimos 7 dias continuar</div></div>
+            <div class="card-table table-responsive">
+              <table class="table table-sm table-vcenter"><thead><tr><th>Indicador</th><th class="text-end">Agora</th>
+                <th class="text-end" title="taxas: mudança por dia pela reta dos 7 dias · contagens: ritmo médio por dia">Tendência</th>
+                <th class="text-end" title="valor esperado na data da decisão se a tendência continuar">Em <span class="pv-d">09/12</span></th>
+                <th class="text-end">Meta</th><th>Situação</th></tr></thead>
+              <tbody id="t-previsao"></tbody></table>
+            </div>
+            <div class="card-footer text-secondary small">Taxas: a tendência dos 7 dias é estendida por no máximo 7 dias. Contagens: ritmo médio até a data. Metas do 1º ciclo (PLANO-nivel3.md), que só se revisam com 2 semanas de dados. "amostra curta" = menos de 30 casos ou 5 dias com dado.</div>
+          </div></div>
+          <div class="col-12"><div class="card">
             <div class="card-header"><h3 class="card-title">Com resposta por rede</h3>
               <div class="card-actions text-secondary small">comentários em posts de terceiros · leitura confirmada = o leitor foi conferido com um contador real</div></div>
             <div class="card-table table-responsive">
@@ -606,10 +619,10 @@ let POR_PAGINA = 10;
 const PAGINAS = {geral: ["i-rec", "i-conv", "i-inter", "i-leads", "i-seg10", "i-oport", "k-pub", "k-eng", "k-taxa", "k-aprov", "k-seg", "k-alvo", "g-dia", "limites", "t-tendencias"], seguidores: ["t-metas", "t-seguidores"],
   seguindo: ["sg-total", "sg-hoje", "sg-volta", "sg-fila", "t-seguindo", "t-seguindo-origem"],
   autoria: ["au-posts", "au-achados", "au-resp", "au-news", "t-autoria", "l-achados"],
-  engajamento: ["en-conv", "en-vpa", "en-conversa", "en-vel", "en-ent", "en-rec", "t-engaj", "en-apoio"],
+  previsao: ["t-previsao"], engajamento: ["en-conv", "en-vpa", "en-conversa", "en-vel", "en-ent", "en-rec", "t-engaj", "en-apoio"],
   alvos: ["a-resumo", "t-alvos", "t-maiores"], sobre: ["s-fluxo", "s-papeis", "s-protecoes", "s-numeros", "s-tecnica"],
   resultados: ["t-operacao", "g-hora", "t-grupo"], itens: ["t-itens"], pautas: ["ideias"], enxame: ["x-resumo", "x-mapa", "t-paises", "t-enxame", "t-coord", "t-eventos"]};
-const ROTULOS = {enxame: "Enxame de agentes", sobre: "Como funciona", geral: "Visão geral", alvos: "Qualidade dos alvos", seguidores: "Seguidores", seguindo: "Seguindo", autoria: "Autoridade", engajamento: "Engajamento", resultados: "Resultados", itens: "Itens", pautas: "Pautas"};
+const ROTULOS = {enxame: "Enxame de agentes", sobre: "Como funciona", geral: "Visão geral", alvos: "Qualidade dos alvos", seguidores: "Seguidores", seguindo: "Seguindo", autoria: "Autoridade", engajamento: "Engajamento", previsao: "Previsão", resultados: "Resultados", itens: "Itens", pautas: "Pautas"};
 let pg = "geral";
 function marcarPaginas() {
   const linha = document.querySelector(".row-cards");
@@ -649,7 +662,7 @@ function mostrarPagina() {
   document.querySelectorAll(".row-cards > [data-pg]").forEach(c => c.classList.toggle("d-none", c.dataset.pg !== pg));
   document.querySelectorAll("#paginas [data-pg]").forEach(a => { const on = a.dataset.pg === pg; a.classList.toggle("active", on); a.setAttribute("aria-selected", on); });
   document.getElementById("titulo-pagina").textContent = ROTULOS[pg];
-  document.querySelector(".filtros").classList.toggle("d-none", pg === "sobre" || pg === "enxame");  // a explicação não depende de filtro
+  document.querySelector(".filtros").classList.toggle("d-none", pg === "sobre" || pg === "enxame" || pg === "previsao");  // a explicação não depende de filtro
   document.querySelector("#paginas .active")?.scrollIntoView({inline: "center", block: "nearest"});  // a aba atual fica visível na faixa
   document.body.classList.toggle("pg-itens", pg === "itens");  // Itens mostra todos os filtros; nas outras abas ficam em "Mais filtros"
   scrollTo(0, 0);
@@ -1017,6 +1030,68 @@ function engajamento(serie) {
     + `<div><b>TabNews:</b> ${tab ? num(tab.valor) : "–"} tabcoins somados</div>`;
 }
 
+// ---------- previsão: o que acontece até a decisão de 09/12 se o ritmo dos últimos 7 dias continuar ----------
+const DECISAO = "2026-12-09";
+const METAS_PREV = {resposta: 10, alvos: 50, falhas: 3, noar: 95, publicados: 40, conversas: 10};  // PLANO-nivel3.md; publicados/dia é piso proposto
+function regressao(pts) {  // [[x, y], ...] -> inclinação por dia (precisa de 4 pontos)
+  const n = pts.length; if (n < 4) return null;
+  const mx = pts.reduce((a, p) => a + p[0], 0) / n, my = pts.reduce((a, p) => a + p[1], 0) / n;
+  const sxx = pts.reduce((a, p) => a + (p[0] - mx) ** 2, 0), sxy = pts.reduce((a, p) => a + (p[0] - mx) * (p[1] - my), 0);
+  return sxx ? sxy / sxx : null;
+}
+function previsao() {
+  const el = document.getElementById("t-previsao"); if (!el || !dados) return;
+  const agora = Date.now() / 1000, ok = LEITURA_OK(), itens = dados.itens || [];
+  const dias7 = [...Array(7)].map((_, k) => dia(agora - (6 - k) * 86400));
+  const restam = Math.max(0, Math.ceil((new Date(DECISAO + "T23:59:00") - Date.now()) / 86400000));
+  const ate = DECISAO.slice(8) + "/" + DECISAO.slice(5, 7);
+  document.getElementById("pv-data").textContent = ate; document.querySelectorAll(".pv-d").forEach(e => e.textContent = ate);
+  document.getElementById("pv-sub").textContent = `se o ritmo dos últimos 7 dias continuar · faltam ${restam} dias`;
+  const f = (v, d = 1) => v === null || v === undefined || isNaN(v) ? "–" : String(Math.round(v * 10 ** d) / 10 ** d).replace(".", ",");
+  const grupos = (campo, filtro) => dias7.map(d => itens.filter(i => i[campo] && dia(i[campo]) === d && filtro(i)));
+  const linhas = [];
+  // taxa: nível dos 7 dias + inclinação; a projeção soma a inclinação por até 7 dias (3 até o meio da janela + os que faltam), nos limites 0–100
+  const taxaLinha = (rot, gs, num, den, meta, sentido, dica) => {
+    const n = gs.reduce((a, g) => a + den(g), 0), k = gs.reduce((a, g) => a + num(g), 0);
+    const pts = gs.map((g, x) => [x, den(g) ? 100 * num(g) / den(g) : null]).filter(p => p[1] !== null);
+    linhas.push({rot, dica, atual: n ? 100 * k / n : null, b: regressao(pts), un: "%", meta, sentido, curta: n < 30 || pts.length < 5, horizonte: Math.min(7, 3 + restam), teto: 100});
+  };
+  const pub = i => i.status === "publicado" && i.tipo === "terceiro";
+  taxaLinha("Com resposta (8 redes com leitura confirmada)", grupos("publicado", i => pub(i) && ok.has(i.rede) && i.curtidas != null), g => g.filter(i => i.respostas > 0).length, g => g.length, METAS_PREV.resposta, "mais", "comentários medidos que viraram conversa");
+  taxaLinha("Alvos de qualidade", grupos("publicado", pub), g => g.filter(i => qualidade(i) === true).length, g => g.filter(i => qualidade(i) !== null).length, METAS_PREV.alvos, "mais", "relevante, com tração e pessoa");
+  taxaLinha("Falhas de publicação", grupos("criado", i => i.status === "publicado" || i.status === "erro"), g => g.filter(i => i.status === "erro").length, g => g.length, METAS_PREV.falhas, "menos", "erros ÷ (publicados + erros)");
+  // no ar: vem pronto por dia
+  const nd = ((dados.saude || {}).no_ar || {}).dias || [], pn = nd.filter(d => d.esperados).map((d, x) => [x, 100 * d.vistos / d.esperados]);
+  if (pn.length) linhas.push({rot: "No ar na janela", dica: "blocos de 5 min com o agente rodando", atual: ((dados.saude || {}).no_ar || {}).pct7 ?? null, b: null,  // sem tendência: a queda do mini em 13/11 domina a reta
+     un: "%", meta: METAS_PREV.noar, sentido: "mais", curta: pn.length < 5, horizonte: Math.min(7, 3 + restam), teto: 100});
+  // seguidores: saldo na janela e saldo esperado se o ritmo continuar
+  for (const r of ["linkedin", "instagram", "x"]) {
+    const sr = (dados.seguidores || []).filter(x => x.rede === r).sort((a, b) => a.dia < b.dia ? -1 : 1);
+    if (sr.length < 2) continue;
+    const dd = Math.max(1, (new Date(sr[sr.length - 1].dia) - new Date(sr[0].dia)) / 86400000), saldo = sr[sr.length - 1].valor - sr[0].valor;
+    linhas.push({rot: `Saldo de seguidores · ${nome(r)}`, dica: "ganhos menos perdas na série", atual: saldo, b: saldo / dd, un: "", meta: 1, sentido: "mais", curta: sr.length < 5, projecao: saldo + saldo / dd * restam, absoluto: true});
+  }
+  // publicados por dia e acumulado
+  const porDia = dias7.map((d, x) => [x, itens.filter(i => i.status === "publicado" && i.publicado && dia(i.publicado) === d).length]);
+  const med = porDia.reduce((a, p) => a + p[1], 0) / 7, total = itens.filter(i => i.status === "publicado").length;
+  linhas.push({rot: "Publicados por dia", dica: "todas as redes", atual: med, b: regressao(porDia), un: "", meta: METAS_PREV.publicados, sentido: "mais", curta: false, projecao: total + med * restam, projTexto: v => `${num(Math.round(v))} no total`, horizonte: Math.min(7, 3 + restam)});
+  const cv = (dados.indicadores || {}).conversas || {}, dv = (dados.indicadores || {}).dias || 7;
+  if (cv.respondidas != null) linhas.push({rot: "Conversas respondidas", dica: "pessoas que responderam e foram respondidas", atual: cv.respondidas, b: cv.respondidas / dv, un: "", meta: METAS_PREV.conversas, sentido: "mais", curta: cv.respondidas < 30, projecao: cv.respondidas + cv.respondidas / dv * restam, absoluto: true});
+  el.innerHTML = linhas.map(l => {
+    const proj = l.projecao !== undefined ? l.projecao : l.atual === null ? null : Math.max(0, Math.min(l.teto ?? Infinity, l.atual + (l.b || 0) * l.horizonte));
+    const mais = l.sentido === "mais", bate = v => v !== null && (mais ? v >= l.meta : v < l.meta);
+    const sit = l.atual === null ? ["sem dado", "secondary"]
+      : bate(l.atual) && bate(proj) ? ["no ritmo", "green"]
+      : bate(proj) ? ["chega se a tendência continuar", "azure"]
+      : (mais ? proj >= 0.8 * l.meta : proj < 1.5 * l.meta) ? ["perto, mas não chega", "orange"] : ["fora do ritmo", "red"];
+    const tend = l.b === null || l.b === undefined ? "–" : `<span class="${(l.b > 0) === mais ? "text-green" : l.b === 0 ? "text-secondary" : "text-red"}">${l.b > 0 ? "+" : ""}${f(l.b, 2)}${l.un ? " p.p." : ""}/dia</span>`;
+    const projTxt = proj === null ? "–" : l.projTexto ? l.projTexto(proj) : (l.absoluto ? f(proj, 0) : f(proj)) + l.un;
+    const metaTxt = (mais ? "≥ " : "< ") + f(l.meta, 0) + (l.un || "") + (l.rot === "Publicados por dia" ? "/dia" : "");
+    return `<tr><td>${esc(l.rot)}<div class="text-secondary small">${esc(l.dica)}</div></td><td class="text-end">${f(l.atual)}${l.atual === null ? "" : l.un}</td>`
+      + `<td class="text-end">${tend}</td><td class="text-end">${projTxt}${l.curta ? '<div class="text-secondary small">amostra curta</div>' : ""}</td>`
+      + `<td class="text-end">${metaTxt}</td><td><span class="badge bg-${sit[1]}-lt">${sit[0]}</span></td></tr>`;
+  }).join("");
+}
 function metaResposta(com) {  // por rede: quantos medidos, % com resposta e a meta; sem leitura confirmada a rede fica de fora do indicador
   const ok = LEITURA_OK(), el = document.getElementById("t-meta-resp");
   el.innerHTML = REDES.filter(r => F.redes.has(r)).map(r => {
@@ -1299,7 +1374,7 @@ function aplicar() {
   const comparar = F.p < 90 && filtrados(1, false).length > 0;  // sem dado no período anterior a seta só repetiria o total
   kpis(filtrados(0), comparar ? filtrados(1) : [], filtrados(0, false), comparar ? filtrados(1, false) : [], comparar);
   graficoDia(filtrados(0)); graficoHora(filtrados(0));
-  limites(dados.limites || {}); indicadores(dados.indicadores); tendencias(dados.tendencias); enxame(dados.enxame); seguidores(dados.seguidores || []); metas(dados.seguidores || [], filtrados(0, false)); seguindo(dados.seguindo, dados.seguidores || []); autoria(dados.autoria); engajamento(dados.seguidores || []); alvos(filtrados(0, false)); grupo(); tabela();
+  limites(dados.limites || {}); indicadores(dados.indicadores); tendencias(dados.tendencias); enxame(dados.enxame); seguidores(dados.seguidores || []); metas(dados.seguidores || [], filtrados(0, false)); previsao(); seguindo(dados.seguindo, dados.seguidores || []); autoria(dados.autoria); engajamento(dados.seguidores || []); alvos(filtrados(0, false)); grupo(); tabela();
 }
 async function carregar() {
   try {
