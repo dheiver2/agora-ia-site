@@ -361,6 +361,15 @@
             <div class="card-header"><h3 class="card-title">Qualidade e autoridade</h3></div>
             <div class="card-body small" id="en-apoio"></div>
           </div></div>
+          <div class="col-12"><div class="card">
+            <div class="card-header"><h3 class="card-title">Com resposta por rede</h3>
+              <div class="card-actions text-secondary small">comentários em posts de terceiros · leitura confirmada = o leitor foi conferido com um contador real</div></div>
+            <div class="card-table table-responsive">
+              <table class="table table-sm table-vcenter"><thead><tr><th>Rede</th><th class="text-end">Publicados</th><th class="text-end">Medidos</th>
+                <th class="text-end">Com resposta</th><th class="text-end">Meta</th><th>Situação</th></tr></thead>
+              <tbody id="t-meta-resp"></tbody></table>
+            </div>
+          </div></div>
 
                     <div class="col-12"><div class="card">
             <div class="card-header"><h3 class="card-title">Operação e aprendizado</h3>
@@ -764,7 +773,13 @@ document.getElementById("f-mais").addEventListener("click", e => {
 const soma = (l, k) => l.reduce((s, i) => s + (i[k] || 0), 0);
 const engaj = l => soma(l, "curtidas") + soma(l, "respostas");
 const medidos = l => l.filter(i => i.curtidas !== null && i.curtidas !== undefined);
-const taxa = l => { const m = medidos(l); return m.length ? Math.round(100 * m.filter(i => i.respostas > 0).length / m.length) : null; };
+// 14/11: só entram no "Com resposta" as redes em que o leitor de curtidas/respostas foi conferido com um contador real (config.REDES_LEITURA_CONFIRMADA);
+// nas outras (Threads, Instagram, Facebook, Substack, TikTok) a página só mostra a contagem acima de zero e o 0 não está provado
+const LEITURA_OK = () => new Set((dados && dados.leitura_confirmada) || ["youtube", "x", "linkedin", "reddit", "bluesky", "github", "huggingface", "tabnews"]);
+const medidosOk = l => { const ok = LEITURA_OK(); return medidos(l).filter(i => ok.has(i.rede)); };
+const taxa = l => { const m = medidosOk(l); return m.length ? Math.round(100 * m.filter(i => i.respostas > 0).length / m.length) : null; };
+// meta de "com resposta" por rede (só onde há base: YouTube 29% e LinkedIn 21% em 7 dias; o X quase não responde por natureza)
+const META_RESP = {youtube: 25, linkedin: 20, x: 5};
 const aprov = l => { const g = l.filter(i => i.tipo === "terceiro" && i.status !== "pendente"); return g.length ? Math.round(100 * g.filter(i => i.status === "publicado").length / g.length) : null; };
 const media = l => l.length ? Math.round(l.reduce((a, b) => a + b, 0) / l.length) : null;
 function delta(id, agora, antes, sufixo = "") {
@@ -787,10 +802,10 @@ function kpis(l, ant, todos, todosAnt, comparar) {
   const vis = mediana(com.map(i => i.views)), nVis = com.filter(i => i.views != null).length;
   set("k-eng-sub", `${num(soma(pub, "curtidas"))} ${soma(pub, "curtidas") === 1 ? "curtida" : "curtidas"} · ${num(soma(pub, "respostas"))} ${soma(pub, "respostas") === 1 ? "resposta" : "respostas"} · medidos ${mc} de ${com.length}` + (cob === null ? "" : ` (${cob}%)`)
     + (nVis ? ` · ${num(vis)} views por comentário (mediana de ${nVis})` : ""));
-  const tx = taxa(pub); set("k-taxa", tx === null ? "–" : tx + "%"); delta("d-taxa", tx, c(0, taxa(pubA)), " p.p.");
+  const tx = taxa(pub); set("k-taxa", tx === null ? "–" : tx + "%"); delta("d-taxa", tx, c(0, medidosOk(pubA).length >= 10 ? taxa(pubA) : null), " p.p.");  // sem base anterior (menos de 10 medidos) a seta não significa nada
   // conversa de verdade = alguém respondeu a um comentário nosso; respostas nos posts próprios e "Up"/emoji ficam à parte
   const rec = todos.filter(i => i.tipo === "resposta"), nc = k => rec.filter(i => i.conversa === k).length;
-  set("k-taxa-sub", `dos medidos · ${nc("comentario")} ${nc("comentario") === 1 ? "conversa veio" : "conversas vieram"} dos comentários`
+  set("k-taxa-sub", `${medidosOk(pub).length} medidos em ${LEITURA_OK().size} redes com leitura confirmada · ${nc("comentario")} ${nc("comentario") === 1 ? "conversa veio" : "conversas vieram"} dos comentários`
     + (nc("proprio") ? ` · ${nc("proprio")} nos seus posts` : "") + (nc("rasa") ? ` · ${nc("rasa")} rasas (Up, emoji)` : ""));
   const ap = aprov(todos); set("k-aprov", ap === null ? "–" : ap + "%"); delta("d-aprov", ap, c(0, aprov(todosAnt)), " p.p.");
   const nm = media(todos.filter(i => i.nota !== null && i.status === "publicado").map(i => i.nota));
@@ -953,6 +968,7 @@ function engajamento(serie) {
   const pct = (a, b) => b ? Math.round(100 * a / b) + "%" : "–", med = l => l.length ? l.reduce((a, b) => a + b, 0) / l.length : null;
   const ini = inicio(0), desde = dia(ini + 3600), base = filtrados(0, false), pub = base.filter(i => i.status === "publicado");
   const com = pub.filter(i => i.tipo === "terceiro"), posts = pub.filter(i => i.tipo === "post");
+  metaResposta(com);
   const medidos = l => l.filter(i => i.curtidas !== null && i.curtidas !== undefined);
   const vis = l => l.filter(i => i.views !== null && i.views !== undefined && !(i.rede === "youtube" && i.tipo === "terceiro")).map(i => i.views);  // no YouTube a view é do vídeo, não do comentário
   const medn = l => mediana(l);
@@ -1001,6 +1017,19 @@ function engajamento(serie) {
     + `<div><b>TabNews:</b> ${tab ? num(tab.valor) : "–"} tabcoins somados</div>`;
 }
 
+function metaResposta(com) {  // por rede: quantos medidos, % com resposta e a meta; sem leitura confirmada a rede fica de fora do indicador
+  const ok = LEITURA_OK(), el = document.getElementById("t-meta-resp");
+  el.innerHTML = REDES.filter(r => F.redes.has(r)).map(r => {
+    const l = com.filter(i => i.rede === r), m = medidos(l), cr = m.filter(i => i.respostas > 0).length, meta = META_RESP[r];
+    const pct = m.length ? Math.round(100 * cr / m.length) : null, conf = ok.has(r);
+    const sit = !conf ? '<span class="text-secondary">leitura sem confirmação: fora do indicador</span>'
+      : m.length < 15 ? `<span class="text-secondary">poucos medidos (${m.length}): sem conclusão</span>`
+      : meta === undefined ? '<span class="text-secondary">sem meta: definir com 30 medidos</span>'
+      : pct >= meta ? '<span class="text-green">na meta</span>' : '<span class="text-red">abaixo da meta</span>';
+    return `<tr><td>${esc(nome(r))}</td><td class="text-end">${l.length}</td><td class="text-end">${m.length}</td>`
+      + `<td class="text-end">${conf && pct !== null ? pct + "% (" + cr + ")" : "–"}</td><td class="text-end">${meta === undefined ? "–" : meta + "%"}</td><td>${sit}</td></tr>`;
+  }).join("") || '<tr><td colspan="6" class="text-secondary">sem comentários no período</td></tr>';
+}
 // ---------- saúde: % no ar na janela e ensaio diário ----------
 function saude(sd) {
   const na = sd.no_ar || {}, b = document.getElementById("b-noar");
