@@ -375,6 +375,15 @@
             <div class="card-footer text-secondary small">Taxas: a tendência dos 7 dias é estendida por no máximo 7 dias. Contagens: ritmo médio até a data. Metas do 1º ciclo (PLANO-nivel3.md), que só se revisam com 2 semanas de dados. "amostra curta" = menos de 30 casos ou 5 dias com dado.</div>
           </div></div>
           <div class="col-12"><div class="card">
+            <div class="card-header"><h3 class="card-title">Resultado por pilar de conteúdo</h3>
+              <div class="card-actions text-secondary small">o que cada conteúdo faz pela marca · reações = curtidas + respostas por item medido</div></div>
+            <div class="card-table table-responsive">
+              <table class="table table-sm table-vcenter"><thead><tr><th>Pilar</th><th class="text-end">Publicados</th><th class="text-end">Medidos</th>
+                <th class="text-end">Reações por item</th><th class="text-end">Com resposta</th><th>Situação</th></tr></thead>
+              <tbody id="t-pilares"></tbody></table>
+            </div>
+          </div></div>
+          <div class="col-12"><div class="card">
             <div class="card-header"><h3 class="card-title">Com resposta por rede</h3>
               <div class="card-actions text-secondary small">comentários em posts de terceiros · leitura confirmada = o leitor foi conferido com um contador real</div></div>
             <div class="card-table table-responsive">
@@ -619,7 +628,7 @@ let POR_PAGINA = 10;
 const PAGINAS = {geral: ["i-rec", "i-conv", "i-inter", "i-leads", "i-seg10", "i-oport", "k-pub", "k-eng", "k-taxa", "k-aprov", "k-seg", "k-alvo", "g-dia", "limites", "t-tendencias"], seguidores: ["t-metas", "t-seguidores"],
   seguindo: ["sg-total", "sg-hoje", "sg-volta", "sg-fila", "t-seguindo", "t-seguindo-origem"],
   autoria: ["au-posts", "au-achados", "au-resp", "au-news", "t-autoria", "l-achados"],
-  previsao: ["t-previsao"], engajamento: ["en-conv", "en-vpa", "en-conversa", "en-vel", "en-ent", "en-rec", "t-engaj", "en-apoio"],
+  previsao: ["t-previsao"], engajamento: ["t-pilares", "en-conv", "en-vpa", "en-conversa", "en-vel", "en-ent", "en-rec", "t-engaj", "en-apoio"],
   alvos: ["a-resumo", "t-alvos", "t-maiores"], sobre: ["s-fluxo", "s-papeis", "s-protecoes", "s-numeros", "s-tecnica"],
   resultados: ["t-operacao", "g-hora", "t-grupo"], itens: ["t-itens"], pautas: ["ideias"], enxame: ["x-resumo", "x-mapa", "t-paises", "t-enxame", "t-coord", "t-eventos"]};
 const ROTULOS = {enxame: "Enxame de agentes", sobre: "Como funciona", geral: "Visão geral", alvos: "Qualidade dos alvos", seguidores: "Seguidores", seguindo: "Seguindo", autoria: "Autoridade", engajamento: "Engajamento", previsao: "Previsão", resultados: "Resultados", itens: "Itens", pautas: "Pautas"};
@@ -982,6 +991,7 @@ function engajamento(serie) {
   const ini = inicio(0), desde = dia(ini + 3600), base = filtrados(0, false), pub = base.filter(i => i.status === "publicado");
   const com = pub.filter(i => i.tipo === "terceiro"), posts = pub.filter(i => i.tipo === "post");
   metaResposta(com);
+  pilares(pub);
   const medidos = l => l.filter(i => i.curtidas !== null && i.curtidas !== undefined);
   const vis = l => l.filter(i => i.views !== null && i.views !== undefined && !(i.rede === "youtube" && i.tipo === "terceiro")).map(i => i.views);  // no YouTube a view é do vídeo, não do comentário
   const medn = l => mediana(l);
@@ -1090,6 +1100,19 @@ function previsao() {
     return `<tr><td>${esc(l.rot)}<div class="text-secondary small">${esc(l.dica)}</div></td><td class="text-end">${f(l.atual)}${l.atual === null ? "" : l.un}</td>`
       + `<td class="text-end">${tend}</td><td class="text-end">${projTxt}${l.curta ? '<div class="text-secondary small">amostra curta</div>' : ""}</td>`
       + `<td class="text-end">${metaTxt}</td><td><span class="badge bg-${sit[1]}-lt">${sit[0]}</span></td></tr>`;
+  }).join("");
+}
+const PILARES = [["presenca", "Que eu existo", "comentários, respostas e opiniões: ser visto"], ["quem_sou", "Quem eu sou", "apresentação, trajetória, o que penso"],
+  ["prova", "O que eu faço", "resultados medidos, achados, artigos, vídeos"], ["oferta", "O que eu vendo", "serviço, caso, convite para conversar"]];
+function pilares(pub) {  // 14/11: cada item tem um pilar; sem conteúdo no pilar, o painel diz isso em vez de esconder
+  const ok = LEITURA_OK(), el = document.getElementById("t-pilares");
+  if (!pub.some(i => "pilar" in i)) { el.innerHTML = '<tr><td colspan="6" class="text-secondary">disponível depois do próximo reinício do serviço (o campo pilar ainda não chega nos dados)</td></tr>'; return; }
+  el.innerHTML = PILARES.map(([k, rot, dica]) => {
+    const l = pub.filter(i => i.pilar === k), m = medidos(l), reac = m.reduce((a, i) => a + (i.curtidas || 0) + (i.respostas || 0), 0);
+    const mo = m.filter(i => ok.has(i.rede)), cr = mo.filter(i => i.respostas > 0).length;
+    const sit = !l.length ? '<span class="badge bg-red-lt">sem conteúdo ainda</span>' : m.length < 15 ? `<span class="text-secondary">poucos medidos (${m.length})</span>` : "";
+    return `<tr><td>${esc(rot)}<div class="text-secondary small">${esc(dica)}</div></td><td class="text-end">${l.length}</td><td class="text-end">${m.length}</td>`
+      + `<td class="text-end">${m.length ? (reac / m.length).toFixed(2).replace(".", ",") : "–"}</td><td class="text-end">${mo.length ? Math.round(100 * cr / mo.length) + "% (" + cr + ")" : "–"}</td><td>${sit}</td></tr>`;
   }).join("");
 }
 function metaResposta(com) {  // por rede: quantos medidos, % com resposta e a meta; sem leitura confirmada a rede fica de fora do indicador
