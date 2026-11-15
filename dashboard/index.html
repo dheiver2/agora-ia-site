@@ -184,16 +184,16 @@
             <div class="h1 mb-0" id="i-inter">–</div><div class="text-secondary small mt-1" id="i-inter-sub">–</div>
           </div></div></div>
           <div class="col-6 col-lg-2"><div class="card"><div class="card-body">
-            <div class="subheader" title="Pedidos comerciais detectados nas conversas em 7 dias (orçamento, implementação, palestra)">Leads</div>
-            <div class="h1 mb-0" id="i-leads">–</div><div class="text-secondary small mt-1" id="i-leads-sub">–</div>
+            <div class="subheader" title="Quantas vezes seus comentários e posts foram vistos em 7 dias. Só LinkedIn e X: nas outras redes o número lido é do post alheio, não do seu comentário">Impressões</div>
+            <div class="h1 mb-0" id="i-impr">–</div><div class="text-secondary small mt-1" id="i-impr-sub">–</div>
           </div></div></div>
           <div class="col-6 col-lg-2"><div class="card"><div class="card-body">
             <div class="subheader" title="Saldo de seguidores em 7 dias dividido pelas publicações, vezes 10">Seguidores por 10 publicações</div>
             <div class="h1 mb-0" id="i-seg10">–</div><div class="text-secondary small mt-1" id="i-seg10-sub">–</div>
           </div></div></div>
           <div class="col-6 col-lg-2"><div class="card"><div class="card-body">
-            <div class="subheader" title="Chamadas de palestra, eventos, podcasts e editais achados em 7 dias">Oportunidades</div>
-            <div class="h1 mb-0" id="i-oport">–</div><div class="text-secondary small mt-1" id="i-oport-sub">–</div>
+            <div class="subheader" title="Posts próprios publicados em 7 dias, por pilar: quem sou, o que faço (medido em bancada) e o que vendo (oferta)">Posts de marca</div>
+            <div class="h1 mb-0" id="i-marca">–</div><div class="text-secondary small mt-1" id="i-marca-sub">–</div>
           </div></div></div>
           <div class="w-100 m-0 p-0"></div>
 
@@ -481,7 +481,7 @@
               <li><b>Conversador</b>: responde quem respondeu e quem comenta nos posts próprios (até 3 vezes por fio); curte antes de responder.</li>
               <li><b>Relacionamento</b>: mantém o círculo de quem interage e acompanha os próximos posts dessas pessoas.</li>
               <li><b>Autor</b>: posts próprios de resultados medidos, conversas reaproveitadas no formato de cada rede e carrossel.</li>
-              <li><b>Leads e Oportunidades</b>: pedido comercial e chamada de palestra viram aviso; o agente não fecha negócio.</li>
+              <li><b>Impressões e Posts de marca</b>: quantas vezes você foi visto no LinkedIn e no X, e quantos posts próprios saíram por pilar (quem sou, o que faço, oferta). Pedido comercial e chamada de palestra continuam virando aviso no painel.</li>
               <li><b>Experimentador e Maestro</b>: testam uma alavanca por vez e priorizam cada rede pelo retorno medido.</li>
               <li>Todos formam o <a href="#" data-ir="enxame">enxame de 107 agentes</a>: 14 redes × 7 funções + 9 coordenadores.</li>
             </ul></div>
@@ -625,7 +625,7 @@ if (PUBLICO) document.getElementById("link-painel").remove();
 let dados = null, gDia = null, gHora = null, campo = "rede", ordem = ["quando", -1], pagina = 0;
 let POR_PAGINA = 10;
 // ---------- páginas (cada uma cabe na tela, sem rolar) ----------
-const PAGINAS = {geral: ["i-rec", "i-conv", "i-inter", "i-leads", "i-seg10", "i-oport", "k-pub", "k-eng", "k-taxa", "k-aprov", "k-seg", "k-alvo", "g-dia", "limites", "t-tendencias"], seguidores: ["t-metas", "t-seguidores"],
+const PAGINAS = {geral: ["i-rec", "i-conv", "i-inter", "i-impr", "i-seg10", "i-marca", "k-pub", "k-eng", "k-taxa", "k-aprov", "k-seg", "k-alvo", "g-dia", "limites", "t-tendencias"], seguidores: ["t-metas", "t-seguidores"],
   seguindo: ["sg-total", "sg-hoje", "sg-volta", "sg-fila", "t-seguindo", "t-seguindo-origem"],
   autoria: ["au-posts", "au-achados", "au-resp", "au-news", "t-autoria", "l-achados"],
   previsao: ["t-previsao"], engajamento: ["t-pilares", "en-conv", "en-vpa", "en-conversa", "en-vel", "en-ent", "en-rec", "t-engaj", "en-apoio"],
@@ -646,7 +646,7 @@ function linhasQueCabem() {  // quantos itens cabem na tela até o rodapé da ta
   return Math.max(5, Math.min(25, Math.floor((innerHeight - topo - 75) / 66)));
 }
 // integração entre abas: cada indicador da Visão geral abre a aba onde está o detalhe dele
-const IR = {"i-rec": "engajamento", "i-conv": "itens", "i-inter": "seguidores", "i-leads": "itens", "i-seg10": "seguidores", "i-oport": "resultados", "k-pub": "itens", "k-eng": "engajamento", "k-taxa": "engajamento", "k-aprov": "itens", "k-seg": "seguidores", "k-alvo": "alvos"};
+const IR = {"i-rec": "engajamento", "i-conv": "itens", "i-inter": "seguidores", "i-impr": "engajamento", "i-seg10": "seguidores", "i-marca": "itens", "k-pub": "itens", "k-eng": "engajamento", "k-taxa": "engajamento", "k-aprov": "itens", "k-seg": "seguidores", "k-alvo": "alvos"};
 function ligarAbas() {
   for (const [id, alvo] of Object.entries(IR)) {
     const el = document.getElementById(id), card = el && el.closest(".card");
@@ -1189,15 +1189,16 @@ function metas(s, l) {
 function indicadores(x) {
   if (!x) return;
   const put = (id, v, sub) => { document.getElementById(id).textContent = v; document.getElementById(id + "-sub").textContent = sub; };
-  const r = x.reciprocidade || {}, c = x.conversas || {}, it = x.interacoes || {}, l = x.leads || {}, sg = x.seg_por_10 || {}, op = x.oportunidades || {};
+  const r = x.reciprocidade || {}, c = x.conversas || {}, it = x.interacoes || {}, im = x.impressoes || {}, sg = x.seg_por_10 || {}, pm = x.posts_marca || {};
   put("i-rec", r.pct == null ? "–" : String(r.pct).replace(".", ",") + "%", r.n ? `${r.voltaram} de ${r.n} pessoas comentadas (30 dias)` : "sem dado");
   put("i-conv", c.recebidas ? `${c.respondidas}/${c.recebidas}` : "–", c.recebidas ? (c.horas_mediana != null ? `resposta em ${String(c.horas_mediana).replace(".", ",")} h (mediana)` : "") + (c.pendentes ? ` · ${c.pendentes} na fila` : "") : "nenhuma conversa");
   const ac = it.acoes || {}, NOM = {comentou: "comentários", reagiu: "reações", segue: "novos seguidores", compartilhou: "compartilhamentos", mencionou: "menções"};
   put("i-inter", num(it.pessoas || 0), Object.entries(ac).map(([k, n]) => `${n} ${NOM[k] || k}`).join(" · ") || "pessoas (LinkedIn)");
-  put("i-leads", num(l.n || 0), Object.entries(l.tipos || {}).map(([k, n]) => `${n} ${k}`).join(" · ") || "nenhum pedido comercial");
+  put("i-impr", im.total == null ? "–" : num(im.total), im.itens ? Object.entries(im.por_rede || {}).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${nome(k)} ${num(v)}`).join(" · ") + ` · ${im.itens} itens lidos` : "sem leitura ainda");
   const melhores = Object.entries(sg.por_rede || {}).sort((a, b) => b[1] - a[1]).slice(0, 2).map(([k, v]) => `${nome(k)} ${String(v).replace(".", ",")}`);
   put("i-seg10", sg.geral == null ? "–" : String(sg.geral).replace(".", ","), melhores.length ? "melhores: " + melhores.join(" · ") : "sem dado");
-  put("i-oport", num(op.n || 0), (op.lista || []).map(o => o.titulo).slice(0, 2).join(" · ") || "chamadas abertas achadas");
+  const PIL = {quem_sou: "quem sou", prova: "o que faço", oferta: "oferta", presenca: "outros"};
+  put("i-marca", pm.n == null ? "–" : num(pm.n), ["quem_sou", "prova", "oferta", "presenca"].filter(k => (pm.por_pilar || {})[k]).map(k => `${pm.por_pilar[k]} ${PIL[k]}`).join(" · ") || "nenhum post próprio");
   const pc = x.proprio_x_comentario || {}, cb = x.cobertura || {}, ab = x.teste_ab || {}, tm = x.tempo_medir || {}, cu = x.curtidas || {}, es = x.espera || {};
   const vir = v => v == null ? "–" : String(v).replace(".", ",");
   const blocos = [
