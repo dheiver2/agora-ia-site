@@ -538,6 +538,15 @@
               <tbody id="t-alvos"></tbody></table>
             </div>
           </div></div>
+          <div class="col-12"><div class="card">
+            <div class="card-header"><h3 class="card-title" id="lista-titulo">Lista acompanhada</h3>
+              <div class="card-actions text-secondary small" id="lista-nota">comentários em posts de quem está na lista × os demais comentários no LinkedIn</div></div>
+            <div class="card-table table-responsive">
+              <table class="table table-sm table-vcenter"><thead><tr><th>Grupo</th><th class="text-end">Comentários</th><th class="text-end">Medidos</th>
+                <th class="text-end">Com resposta</th><th class="text-end">Reações por item</th><th class="text-end" title="mediana de quantas pessoas viram cada comentário">Impressões (mediana)</th><th>Situação</th></tr></thead>
+              <tbody id="t-lista"></tbody></table>
+            </div>
+          </div></div>
           <div class="col-lg-5"><div class="card">
             <div class="card-header"><h3 class="card-title">Maiores perfis comentados</h3><div class="card-actions text-secondary small" id="t-maiores-nota">só pessoas · em negrito, referências de IA no Brasil</div></div>
             <div class="card-table table-responsive">
@@ -629,7 +638,7 @@ const PAGINAS = {geral: ["i-rec", "i-conv", "i-inter", "i-impr", "i-seg10", "i-m
   seguindo: ["sg-total", "sg-hoje", "sg-volta", "sg-fila", "t-seguindo", "t-seguindo-origem"],
   autoria: ["au-posts", "au-achados", "au-resp", "au-news", "t-autoria", "l-achados"],
   previsao: ["t-previsao"], engajamento: ["t-pilares", "en-conv", "en-vpa", "en-conversa", "en-vel", "en-ent", "en-rec", "t-engaj", "en-apoio"],
-  alvos: ["a-resumo", "t-alvos", "t-maiores"], sobre: ["s-fluxo", "s-papeis", "s-protecoes", "s-numeros", "s-tecnica"],
+  alvos: ["a-resumo", "t-alvos", "t-lista", "t-maiores"], sobre: ["s-fluxo", "s-papeis", "s-protecoes", "s-numeros", "s-tecnica"],
   resultados: ["t-operacao", "g-hora", "t-grupo"], itens: ["t-itens"], pautas: ["ideias"], enxame: ["x-resumo", "x-mapa", "t-paises", "t-enxame", "t-coord", "t-eventos"]};
 const ROTULOS = {enxame: "Enxame de agentes", sobre: "Como funciona", geral: "Visão geral", alvos: "Qualidade dos alvos", seguidores: "Seguidores", seguindo: "Seguindo", autoria: "Autoridade", engajamento: "Engajamento", previsao: "Previsão", resultados: "Resultados", itens: "Itens", pautas: "Pautas"};
 let pg = "geral";
@@ -884,7 +893,26 @@ function pontosAlvo(i) {
   const extra = [i.views != null ? compacto(i.views) + " viram seu comentário" : "", i.post_views ? compacto(i.post_views) + " views" : i.post_interacoes != null ? compacto(i.post_interacoes) + " interações" : "", i.autor_seguidores != null ? compacto(i.autor_seguidores) + " seg." : ""].filter(Boolean).join(" · ");
   return p(i.alvo_relevante, "Post relevante") + p(i.alvo_visivel, "Post com tração") + p(i.alvo_pessoa, "Pessoa relevante") + (extra ? `<div class="text-secondary small">${extra}</div>` : "");
 }
+function listaAcompanhada(l) {  // 15/11: comentar nos perfis da lista rende mais que a média do LinkedIn?
+  const la = dados.lista_acompanhada, el = document.getElementById("t-lista");
+  if (!la) { el.innerHTML = '<tr><td colspan="7" class="text-secondary">disponível depois do próximo reinício do serviço</td></tr>'; return; }
+  document.getElementById("lista-titulo").textContent = `Lista acompanhada: ${la.titulo} (${la.pessoas} perfis)`;
+  const [a, m, d] = la.desde.split("-"); document.getElementById("lista-nota").textContent = `acompanhada desde ${d}/${m} · comentários em posts da lista × os demais no LinkedIn`;
+  const com = l.filter(i => i.status === "publicado" && i.tipo === "terceiro" && i.rede === "linkedin");
+  const linha = (rot, g, base) => {
+    const me = medidos(g), cr = me.filter(i => i.respostas > 0).length, reac = me.reduce((x, i) => x + (i.curtidas || 0) + (i.respostas || 0), 0);
+    const v = mediana(g.map(i => i.views));
+    const sit = !base ? "" : !g.length ? '<span class="badge bg-secondary-lt">nenhum comentário ainda</span>' : me.length < 10 ? `<span class="text-secondary">poucos medidos (${me.length}): ainda não dá para comparar</span>`
+      : (() => { const mb = medidos(base), tb = mb.length ? mb.filter(i => i.respostas > 0).length / mb.length : null, tg = cr / me.length;
+          return tb === null ? "" : tg > tb ? '<span class="badge bg-green-lt">acima dos demais</span>' : '<span class="badge bg-red-lt">abaixo dos demais</span>'; })();
+    return `<tr><td>${rot}</td><td class="text-end">${g.length}</td><td class="text-end">${me.length}</td><td class="text-end">${me.length ? Math.round(100 * cr / me.length) + "% (" + cr + ")" : "–"}</td>`
+      + `<td class="text-end">${me.length ? (reac / me.length).toFixed(2).replace(".", ",") : "–"}</td><td class="text-end">${v == null ? "–" : num(v)}</td><td>${sit}</td></tr>`;
+  };
+  const na = com.filter(i => i.lista === "ceos"), fora = com.filter(i => i.lista !== "ceos");
+  el.innerHTML = linha("Na lista", na, fora) + linha("Demais comentários no LinkedIn", fora, null);
+}
 function alvos(l) {
+  listaAcompanhada(l);
   const com = l.filter(i => i.status === "publicado" && i.tipo === "terceiro");
   const q = com.map(qualidade).filter(v => v !== null), qp = q.length ? Math.round(100 * q.filter(Boolean).length / q.length) : null;
   const k = document.getElementById("k-alvo");
