@@ -177,23 +177,23 @@
           </div></div></div>
           <div class="col-6 col-lg-2"><div class="card"><div class="card-body">
             <div class="subheader" title="Quem falou com você (resposta a comentário ou comentário no seu post) e recebeu resposta, em 7 dias">Conversas respondidas</div>
-            <div class="h1 mb-0" id="i-conv">–</div><div class="text-secondary small mt-1" id="i-conv-sub">–</div>
+            <div class="d-flex align-items-baseline"><div class="h1 mb-0 me-2" id="i-conv">–</div><div class="kpi-delta ms-auto" id="d-conv"></div></div><div class="text-secondary small mt-1" id="i-conv-sub">–</div>
           </div></div></div>
           <div class="col-6 col-lg-2"><div class="card"><div class="card-body">
             <div class="subheader" title="Pessoas diferentes que reagiram, comentaram, compartilharam ou seguiram (notificações do LinkedIn), 7 dias">Interações nos seus posts</div>
-            <div class="h1 mb-0" id="i-inter">–</div><div class="text-secondary small mt-1" id="i-inter-sub">–</div>
+            <div class="d-flex align-items-baseline"><div class="h1 mb-0 me-2" id="i-inter">–</div><div class="kpi-delta ms-auto" id="d-inter"></div></div><div class="text-secondary small mt-1" id="i-inter-sub">–</div>
           </div></div></div>
           <div class="col-6 col-lg-2"><div class="card"><div class="card-body">
             <div class="subheader" title="Quantas vezes seus comentários e posts foram vistos em 7 dias. Só LinkedIn e X: nas outras redes o número lido é do post alheio, não do seu comentário">Impressões</div>
-            <div class="h1 mb-0" id="i-impr">–</div><div class="text-secondary small mt-1" id="i-impr-sub">–</div>
+            <div class="d-flex align-items-baseline"><div class="h1 mb-0 me-2" id="i-impr">–</div><div class="kpi-delta ms-auto" id="d-impr"></div></div><div class="text-secondary small mt-1" id="i-impr-sub">–</div>
           </div></div></div>
           <div class="col-6 col-lg-2"><div class="card"><div class="card-body">
             <div class="subheader" title="Saldo de seguidores em 7 dias dividido pelas publicações, vezes 10">Seguidores por 10 publicações</div>
-            <div class="h1 mb-0" id="i-seg10">–</div><div class="text-secondary small mt-1" id="i-seg10-sub">–</div>
+            <div class="d-flex align-items-baseline"><div class="h1 mb-0 me-2" id="i-seg10">–</div><div class="kpi-delta ms-auto" id="d-seg10"></div></div><div class="text-secondary small mt-1" id="i-seg10-sub">–</div>
           </div></div></div>
           <div class="col-6 col-lg-2"><div class="card"><div class="card-body">
             <div class="subheader" title="Posts próprios publicados em 7 dias, por pilar: quem sou, o que faço (medido em bancada) e o que vendo (oferta)">Posts de marca</div>
-            <div class="h1 mb-0" id="i-marca">–</div><div class="text-secondary small mt-1" id="i-marca-sub">–</div>
+            <div class="d-flex align-items-baseline"><div class="h1 mb-0 me-2" id="i-marca">–</div><div class="kpi-delta ms-auto" id="d-marca"></div></div><div class="text-secondary small mt-1" id="i-marca-sub">–</div>
           </div></div></div>
           <div class="w-100 m-0 p-0"></div>
 
@@ -220,12 +220,12 @@
           </div></div></div>
           <div class="col-12 col-lg"><div class="card"><div class="card-body">
             <div class="subheader">Seguidores (saldo)</div>
-            <div class="h1 mb-0" id="k-seg">–</div>
+            <div class="d-flex align-items-baseline"><div class="h1 mb-0 me-2" id="k-seg">–</div><div class="kpi-delta ms-auto" id="d-seg"></div></div>
             <div class="text-secondary small mt-1" id="k-seg-sub">–</div>
           </div></div></div>
           <div class="col-12 col-lg"><div class="card"><div class="card-body">
             <div class="subheader" title="Comentários em post relevante, com alta visibilidade e de autor com muitos seguidores (só conta o que deu para medir)">Alvos de qualidade</div>
-            <div class="h1 mb-0" id="k-alvo">–</div>
+            <div class="d-flex align-items-baseline"><div class="h1 mb-0 me-2" id="k-alvo">–</div><div class="kpi-delta ms-auto" id="d-alvo"></div></div>
             <div class="text-secondary small mt-1" id="k-alvo-sub">–</div>
           </div></div></div>
           <div class="w-100 m-0 p-0"></div>
@@ -804,17 +804,22 @@ const taxa = l => { const m = medidosOk(l); return m.length ? Math.round(100 * m
 const META_RESP = {youtube: 25, linkedin: 20, x: 5};
 const aprov = l => { const g = l.filter(i => i.tipo === "terceiro" && i.status !== "pendente"); return g.length ? Math.round(100 * g.filter(i => i.status === "publicado").length / g.length) : null; };
 const media = l => l.length ? Math.round(l.reduce((a, b) => a + b, 0) / l.length) : null;
-function delta(id, agora, antes, sufixo = "") {
+function delta(id, agora, antes, sufixo = "", o = {}) {  // o.inverter: cair é bom (tempo de resposta); o.dica: explicação extra; o.motivo: por que não há seta
   const el = document.getElementById(id);
-  if (agora === null || antes === null || antes === undefined) { el.innerHTML = ""; return; }
-  const d = agora - antes;
-  el.innerHTML = !d ? `<span class="text-secondary" title="igual ao período anterior">=</span>`
-    : `<span class="${d > 0 ? "text-green" : "text-red"}" title="período anterior: ${num(antes)}${sufixo}">${d > 0 ? "▲" : "▼"} ${num(Math.abs(d))}${sufixo}</span>`;
+  if (agora === null || agora === undefined || antes === null || antes === undefined) {
+    el.innerHTML = o.motivo ? `<span class="text-secondary" title="${o.motivo}">–</span>` : ""; return; }
+  const d = Math.round((agora - antes) * 10) / 10, bom = o.inverter ? d < 0 : d > 0, v = x => String(num(x)).replace(".", ",");
+  const dica = `período anterior: ${Number.isInteger(antes) ? num(antes) : String(antes).replace(".", ",")}${sufixo}${o.dica ? " · " + o.dica : ""}`;
+  el.innerHTML = !d ? `<span class="text-secondary" title="igual ao período anterior · ${dica}">=</span>`
+    : `<span class="${bom ? "text-green" : "text-red"}" title="${dica}">${d > 0 ? "▲" : "▼"} ${Number.isInteger(d) ? num(Math.abs(d)) : String(Math.abs(d)).replace(".", ",")}${sufixo}</span>`;
 }
 function kpis(l, ant, todos, todosAnt, comparar) {
   const set = (id, v) => document.getElementById(id).textContent = v;
   const pub = l.filter(i => i.status === "publicado"), pubA = ant.filter(i => i.status === "publicado");
   const c = (a, b) => comparar ? b : null;
+  const qAlvo = x => { const q = x.filter(i => i.status === "publicado" && i.tipo === "terceiro").map(qualidade).filter(v => v !== null); return {n: q.length, pct: q.length ? Math.round(100 * q.filter(Boolean).length / q.length) : null}; };
+  const qa = qAlvo(l), qb = qAlvo(ant);  // seta só com 10 ou mais alvos medidos no período anterior
+  delta("d-alvo", qa.pct, c(0, qb.n >= 10 ? qb.pct : null), " p.p.", {motivo: comparar ? "menos de 10 alvos medidos no período anterior" : ""});
   set("k-pub", num(pub.length)); delta("d-pub", pub.length, c(0, pubA.length));
   const porTipo = Object.entries(pub.reduce((a, i) => (a[i.tipo] = (a[i.tipo] || 0) + 1, a), {})).map(([t, n]) => `${n} ${(PLURAL[t] || [t, t])[n === 1 ? 0 : 1]}`);
   set("k-pub-sub", porTipo.join(" · ") || "nada no período");
@@ -1193,10 +1198,24 @@ function indicadores(x) {
   put("i-rec", r.pct == null ? "–" : String(r.pct).replace(".", ",") + "%", r.n ? `${r.voltaram} de ${r.n} pessoas comentadas (30 dias)` : "sem dado");
   put("i-conv", c.recebidas ? `${c.respondidas}/${c.recebidas}` : "–", c.recebidas ? (c.horas_mediana != null ? `resposta em ${String(c.horas_mediana).replace(".", ",")} h (mediana)` : "") + (c.pendentes ? ` · ${c.pendentes} na fila` : "") : "nenhuma conversa");
   const ac = it.acoes || {}, NOM = {comentou: "comentários", reagiu: "reações", segue: "novos seguidores", compartilhou: "compartilhamentos", mencionou: "menções"};
+  if (c.recebidas && c.horas_mediana != null && (c.ant || {}).horas_mediana != null && (c.ant.respondidas || 0) >= 5) {
+    const dh = Math.round((c.horas_mediana - c.ant.horas_mediana) * 10) / 10;
+    if (dh) document.getElementById("i-conv-sub").innerHTML += ` <span class="${dh < 0 ? "text-green" : "text-red"}" title="mediana anterior: ${String(c.ant.horas_mediana).replace(".", ",")} h (cair é bom)">${dh > 0 ? "▲" : "▼"} ${String(Math.abs(dh)).replace(".", ",")} h</span>`;
+  }
   put("i-inter", num(it.pessoas || 0), Object.entries(ac).map(([k, n]) => `${n} ${NOM[k] || k}`).join(" · ") || "pessoas (LinkedIn)");
   put("i-impr", im.total == null ? "–" : num(im.total), im.itens ? Object.entries(im.por_rede || {}).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${nome(k)} ${num(v)}`).join(" · ") + ` · ${im.itens} itens lidos` : "sem leitura ainda");
   const melhores = Object.entries(sg.por_rede || {}).sort((a, b) => b[1] - a[1]).slice(0, 2).map(([k, v]) => `${nome(k)} ${String(v).replace(".", ",")}`);
   put("i-seg10", sg.geral == null ? "–" : String(sg.geral).replace(".", ","), melhores.length ? "melhores: " + melhores.join(" · ") : "sem dado");
+  const SEM = "o agente ainda não operava no período anterior inteiro";
+  const ca = c.ant || {};
+  delta("d-conv", c.recebidas ?? null, ca.recebidas ?? null, " recebidas", {motivo: SEM,
+    dica: ca.horas_mediana != null && c.horas_mediana != null ? `tempo de resposta: ${String(ca.horas_mediana).replace(".", ",")} h antes, ${String(c.horas_mediana).replace(".", ",")} h agora` : ""});
+  delta("d-inter", it.pessoas ?? null, it.ant ?? null, "", {motivo: "o histórico diário começou em 15/11: a seta aparece com 7 dias de registro"});
+  const ic = im.comp || {}, ia = im.ant || {};
+  delta("d-impr", ic.itens ? ic.total : null, ia.itens >= 10 ? ia.total : null, "", {motivo: "menos de 10 itens lidos no período anterior",
+    dica: `compara 7 dias já medidos (sem os 2 mais recentes): ${num(ic.total || 0)} agora`});
+  delta("d-seg10", sg.geral ?? null, sg.ant ?? null, "", {motivo: "a série de seguidores ainda não cobre a semana anterior inteira"});
+  delta("d-marca", pm.n ?? null, pm.ant ?? null, "", {motivo: SEM});
   const PIL = {quem_sou: "quem sou", prova: "o que faço", oferta: "oferta", presenca: "outros"};
   put("i-marca", pm.n == null ? "–" : num(pm.n), ["quem_sou", "prova", "oferta", "presenca"].filter(k => (pm.por_pilar || {})[k]).map(k => `${pm.por_pilar[k]} ${PIL[k]}`).join(" · ") || "nenhum post próprio");
   const pc = x.proprio_x_comentario || {}, cb = x.cobertura || {}, ab = x.teste_ab || {}, tm = x.tempo_medir || {}, cu = x.curtidas || {}, es = x.espera || {};
@@ -1290,6 +1309,11 @@ function seguidores(s) {
   k.textContent = n ? (saldo > 0 ? "+" : "") + num(saldo) : "–";
   k.className = "h1 mb-0 " + (saldo > 0 ? "text-green" : saldo < 0 ? "text-red" : "");
   document.getElementById("k-seg-sub").textContent = n ? `soma de ${n} redes no período` : "sem medição";
+  const antes0 = dia(inicio(1) + 3600); let saldoA = 0, nA = 0;
+  REDES.filter(r => por[r] && r !== "tabnews").forEach(r => {  // só entra a rede cuja série já existia no começo do período anterior
+    const v = por[r].filter(l => l.dia >= antes0 && l.dia <= desde);
+    if (v.length >= 2 && por[r][0].dia <= antes0) { saldoA += v[v.length - 1].valor - v[0].valor; nA++; } });
+  delta("d-seg", n ? saldo : null, nA && nA === n ? saldoA : null, "", {motivo: "a série de seguidores ainda não cobre o período anterior inteiro"});
 }
 function grupo() {
   const pub = filtrados(0).filter(i => i.status === "publicado"), g = {};
