@@ -214,7 +214,7 @@
             <div class="text-secondary small mt-1" id="k-taxa-sub">dos comentários já medidos</div>
           </div></div></div>
           <div class="col-6 col-lg"><div class="card"><div class="card-body">
-            <div class="subheader">Aprovados no filtro</div>
+            <div class="subheader" title="Dos rascunhos que chegaram à verificação (fatos, regras e Brier), quantos foram aprovados e publicados. Abaixo, o que foi descartado antes de chegar lá.">Aprovados na verificação</div>
             <div class="d-flex align-items-baseline"><div class="h1 mb-0 me-2" id="k-aprov">–</div><div class="kpi-delta ms-auto" id="d-aprov"></div></div>
             <div class="text-secondary small mt-1" id="k-aprov-sub">–</div>
           </div></div></div>
@@ -812,6 +812,7 @@ const taxa = l => { const m = medidosOk(l); return m.length ? Math.round(100 * m
 // meta de "com resposta" por rede (só onde há base: YouTube 29% e LinkedIn 21% em 7 dias; o X quase não responde por natureza)
 const META_RESP = {youtube: 25, linkedin: 20, x: 5};
 const aprov = l => { const g = l.filter(i => i.tipo === "terceiro" && i.status !== "pendente"); return g.length ? Math.round(100 * g.filter(i => i.status === "publicado").length / g.length) : null; };
+const verif = l => { const g = l.filter(i => i.tipo === "terceiro" && ["publicado", "reprovado"].includes(i.status)); return g.length ? Math.round(100 * g.filter(i => i.status === "publicado").length / g.length) : null; };  // publicados ÷ (publicados + reprovados na verificação)
 const media = l => l.length ? Math.round(l.reduce((a, b) => a + b, 0) / l.length) : null;
 function delta(id, agora, antes, sufixo = "", o = {}) {  // o.inverter: cair é bom (tempo de resposta); o.dica: explicação extra; o.motivo: por que não há seta
   const el = document.getElementById(id);
@@ -850,9 +851,13 @@ function kpis(l, ant, todos, todosAnt, comparar) {
   const rec = todos.filter(i => i.tipo === "resposta"), nc = k => rec.filter(i => i.conversa === k).length;
   set("k-taxa-sub", `${medidosOk(pub).length} medidos em ${LEITURA_OK().size} redes com leitura confirmada · ${nc("comentario")} ${nc("comentario") === 1 ? "conversa veio" : "conversas vieram"} dos comentários`
     + (nc("proprio") ? ` · ${nc("proprio")} nos seus posts` : "") + (nc("rasa") ? ` · ${nc("rasa")} rasas (Up, emoji)` : ""));
-  const ap = aprov(todos); set("k-aprov", ap === null ? "–" : ap + "%"); delta("d-aprov", ap, c(0, aprov(todosAnt)), " p.p.");
+  // 16/11: desde 12/11 o agente escreve para mais posts e filtra depois; misturar esse descarte prévio com a reprovação
+  // derrubava o cartão sem piora de qualidade. O número é só a verificação; o descarte prévio fica embaixo, por motivo.
+  const ap = verif(todos); set("k-aprov", ap === null ? "–" : ap + "%"); delta("d-aprov", ap, c(0, verif(todosAnt)), " p.p.");
+  const ter = todos.filter(i => i.tipo === "terceiro"), nd = k => ter.filter(i => i.status === "ignorado" && i.descarte === k).length;
   const nm = media(todos.filter(i => i.nota !== null && i.status === "publicado").map(i => i.nota));
-  set("k-aprov-sub", `nota média ${nm ?? "–"} · ${todos.filter(i => ["reprovado", "ignorado"].includes(i.status)).length} barrados`);
+  set("k-aprov-sub", `${ter.filter(i => i.status === "reprovado").length} reprovados · antes da verificação: ${nd("nota")} nota baixa, ${nd("oportunidade")} sem oportunidade, ${nd("expirado")} vencidos na fila`
+    + (nd("outro") ? `, ${nd("outro")} outros` : "") + ` · nota média ${nm ?? "–"}`);
 }
 
 // ---------- gráficos ----------
@@ -1074,7 +1079,7 @@ function engajamento(serie) {
   const NOMES = {fatos: "fato ou número sem fonte", brier: "modelo calibrado (pertinência, segurança, autoridade)", regras: "regras (fórmula, link, tamanho)", revisor: "revisor", travas: "travas de número", outro: "outro"};
   const gs2 = r => { const l = (serie || []).filter(x => x.rede === r && x.dia >= desde); return l.length >= 2 ? l[l.length - 1].valor - l[0].valor : null; };
   const ins = gs2("substack"), tab = (serie || []).filter(x => x.rede === "tabnews").slice(-1)[0];
-  document.getElementById("en-apoio").innerHTML = `<div class="mb-2"><b>Aprovados no filtro:</b> ${aprov(base) === null ? "–" : aprov(base) + "%"} (o mesmo da Visão geral) · ${num(rep.length)} reprovados na verificação</div>`
+  document.getElementById("en-apoio").innerHTML = `<div class="mb-2"><b>Aprovados na verificação:</b> ${verif(base) === null ? "–" : verif(base) + "%"} (o mesmo da Visão geral) · ${num(rep.length)} reprovados na verificação</div>`
     + (rep.length ? '<ul class="mb-3">' + Object.entries(mot).sort((a, b) => b[1] - a[1]).map(([k, v]) => `<li>${esc(NOMES[k] || k)}: ${v}</li>`).join("") + "</ul>" : "")
     + `<div class="mb-1"><b>Newsletter:</b> ${ins === null ? "–" : (ins >= 0 ? "+" : "") + num(ins)} inscritos no período</div>`
     + `<div><b>TabNews:</b> ${tab ? num(tab.valor) : "–"} tabcoins somados</div>`;
