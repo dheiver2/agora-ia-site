@@ -829,6 +829,13 @@ function kpis(l, ant, todos, todosAnt, comparar) {
   const qAlvo = x => { const q = x.filter(i => i.status === "publicado" && i.tipo === "terceiro").map(qualidade).filter(v => v !== null); return {n: q.length, pct: q.length ? Math.round(100 * q.filter(Boolean).length / q.length) : null}; };
   const qa = qAlvo(l), qb = qAlvo(ant);  // seta só com 10 ou mais alvos medidos no período anterior
   delta("d-alvo", qa.pct, c(0, qb.n >= 10 ? qb.pct : null), " p.p.", {motivo: comparar ? "menos de 10 alvos medidos no período anterior" : ""});
+  // 16/11: Brasil (post em português) × mundo (inglês e espanhol): a relevância do Brier é medida para o público brasileiro,
+  // então misturar os dois esconde a tendência de cada um desde a atuação no mundo todo (12/11)
+  const grupo = (x, br) => qAlvo(x.filter(i => br ? i.idioma === "pt" : i.idioma === "en" || i.idioma === "es"));
+  const parte = (rot, br) => { const a = grupo(l, br), b = grupo(ant, br);
+    const sd = comparar && b.n >= 10 && a.pct !== null && b.pct !== null && a.pct !== b.pct ? ` ${a.pct > b.pct ? "▲" : "▼"}${Math.abs(a.pct - b.pct)}` : "";
+    return `${rot} ${a.pct === null ? "–" : a.pct + "%"}${sd} (${a.n})`; };
+  set("k-alvo-sub", parte("Brasil", true) + " · " + parte("mundo", false));
   set("k-pub", num(pub.length)); delta("d-pub", pub.length, c(0, pubA.length));
   const porTipo = Object.entries(pub.reduce((a, i) => (a[i.tipo] = (a[i.tipo] || 0) + 1, a), {})).map(([t, n]) => `${n} ${(PLURAL[t] || [t, t])[n === 1 ? 0 : 1]}`);
   set("k-pub-sub", porTipo.join(" · ") || "nada no período");
@@ -920,7 +927,7 @@ function alvos(l) {
   k.className = "h1 mb-0 " + (qp !== null && qp >= 50 ? "text-green" : "");
   const pr = pct(com, "alvo_relevante"), pv = pct(com, "alvo_visivel"), pp = pct(com, "alvo_pessoa");
   const f = v => v === null ? "–" : v + "%";
-  document.getElementById("k-alvo-sub").textContent = `relevante ${f(pr)} · post com tração ${f(pv)} · pessoa ${f(pp)}`;
+  document.getElementById("k-alvo-sub").title = `Brasil = post em português; mundo = inglês e espanhol; entre parênteses, quantos foram medidos. Todos: relevante ${f(pr)} · post com tração ${f(pv)} · pessoa ${f(pp)}`;
   const bloco = (rot, v, n, dica) => `<div class="col-6 col-lg-3"><div class="border rounded p-3 h-100"><div class="subheader">${rot}</div>
     <div class="h1 mb-1">${f(v)}</div><div class="progress progress-sm mb-2"><div class="progress-bar" style="width:${v || 0}%;background:var(--tblr-primary)"></div></div>
     <div class="text-secondary small">${dica} · ${n} medidos</div></div></div>`;
