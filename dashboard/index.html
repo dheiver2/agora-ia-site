@@ -173,7 +173,7 @@
           <!-- Resultado (7 dias, fixo): relação e negócio, o que a estratégia quer mover -->
           <div class="col-6 col-lg-2"><div class="card"><div class="card-body">
             <div class="subheader" title="Pessoas comentadas nos últimos 30 dias que responderam, comentaram nos seus posts ou passaram a seguir">Reciprocidade</div>
-            <div class="h1 mb-0" id="i-rec">–</div><div class="text-secondary small mt-1" id="i-rec-sub">–</div>
+            <div class="d-flex align-items-baseline"><div class="h1 mb-0 me-2" id="i-rec">–</div><div class="kpi-delta ms-auto" id="d-rec"></div></div><div class="text-secondary small mt-1" id="i-rec-sub">–</div>
           </div></div></div>
           <div class="col-6 col-lg-2"><div class="card"><div class="card-body">
             <div class="subheader" title="Quem falou com você (resposta a comentário ou comentário no seu post) e recebeu resposta, em 7 dias">Conversas respondidas</div>
@@ -1246,16 +1246,20 @@ function indicadores(x) {
   put("i-impr", im.total == null ? "–" : num(im.total), im.itens ? Object.entries(im.por_rede || {}).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${nome(k)} ${num(v)}`).join(" · ") + ` · ${im.itens} itens lidos` : "sem leitura ainda");
   const melhores = Object.entries(sg.por_rede || {}).sort((a, b) => b[1] - a[1]).slice(0, 2).map(([k, v]) => `${nome(k)} ${String(v).replace(".", ",")}`);
   put("i-seg10", sg.geral == null ? "–" : String(sg.geral).replace(".", ","), melhores.length ? "melhores: " + melhores.join(" · ") : "sem dado");
-  const SEM = "o agente ainda não operava no período anterior inteiro";
+  const SEM = "menos de 3 dias de operação no período anterior";
+  // 17/11: com o período anterior parcial (agente começou em 06/11), a seta compara a média por dia levada a 7 dias
+  const prop = d => d ? `proporcional: o agente operou ${String(d).replace(".", ",")} dias no período anterior` : "";
   const ca = c.ant || {};
+  delta("d-rec", r.pct ?? null, r.ant ?? null, " p.p.", {motivo: "compara com 7 dias atrás: a foto diária começou em 17/11, a seta aparece em 24/11"});
   delta("d-conv", c.recebidas ?? null, ca.recebidas ?? null, " recebidas", {motivo: SEM,
-    dica: ca.horas_mediana != null && c.horas_mediana != null ? `tempo de resposta: ${String(ca.horas_mediana).replace(".", ",")} h antes, ${String(c.horas_mediana).replace(".", ",")} h agora` : ""});
+    dica: [prop(ca.dias), ca.horas_mediana != null && c.horas_mediana != null ? `tempo de resposta: ${String(ca.horas_mediana).replace(".", ",")} h antes, ${String(c.horas_mediana).replace(".", ",")} h agora` : ""].filter(Boolean).join(" · ")});
   delta("d-inter", it.pessoas ?? null, it.ant ?? null, "", {motivo: "o histórico diário começou em 15/11: a seta aparece com 7 dias de registro"});
-  const ic = im.comp || {}, ia = im.ant || {};
-  delta("d-impr", ic.itens ? ic.total : null, ia.itens >= 10 ? ia.total : null, "", {motivo: "menos de 10 itens lidos no período anterior",
-    dica: `compara 7 dias já medidos (sem os 2 mais recentes): ${num(ic.total || 0)} agora`});
-  delta("d-seg10", sg.geral ?? null, sg.ant ?? null, "", {motivo: "a série de seguidores ainda não cobre a semana anterior inteira"});
-  delta("d-marca", pm.n ?? null, pm.ant ?? null, "", {motivo: SEM});
+  const ic = im.comp || {}, ia = im.ant || {}, ic3 = im.comp3 || {}, ia3 = im.ant3 || {};
+  if (ia.itens >= 10) delta("d-impr", ic.itens ? ic.total : null, ia.total, "", {dica: `compara 7 dias já medidos (sem os 2 mais recentes): ${num(ic.total || 0)} agora`});
+  else delta("d-impr", ic3.itens ? ic3.total : null, ia3.itens >= 10 ? ia3.total : null, "", {motivo: "menos de 10 itens lidos nos dias anteriores",
+    dica: `até a semana anterior ter 10 itens medidos: 3 dias já medidos (${num(ic3.total || 0)}) × os 3 dias antes deles`});
+  delta("d-seg10", sg.geral ?? null, sg.ant ?? null, "", {motivo: "menos de 3 dias de série ou de 10 publicações no período anterior"});
+  delta("d-marca", pm.n ?? null, pm.ant ?? null, "", {motivo: SEM, dica: prop(pm.ant_dias)});
   const PIL = {quem_sou: "quem sou", prova: "o que faço", oferta: "oferta", presenca: "outros"};
   put("i-marca", pm.n == null ? "–" : num(pm.n), ["quem_sou", "prova", "oferta", "presenca"].filter(k => (pm.por_pilar || {})[k]).map(k => `${pm.por_pilar[k]} ${PIL[k]}`).join(" · ") || "nenhum post próprio");
   const pc = x.proprio_x_comentario || {}, cb = x.cobertura || {}, ab = x.teste_ab || {}, tm = x.tempo_medir || {}, cu = x.curtidas || {}, es = x.espera || {};
