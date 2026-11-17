@@ -1270,7 +1270,10 @@ function indicadores(x) {
     ["Teste A/B da vez", ab.ativo ? `${ab.A.engajou}/${ab.A.n} × ${ab.B.engajou}/${ab.B.n}` : (ab.adotados ? `${ab.adotados} adotados` : "–"), ab.ativo ? `${ab.ativo} · decide com ${ab.minimo} medidos por braço` : "sem teste ativo"],
     ["Tempo até medir", tm.horas_mediana == null ? "–" : vir(tm.horas_mediana) + " h", tm.n ? `mediana de ${tm.n} itens` : "começa a contar hoje"],
     ["Curtidas dadas hoje", cu.hoje ?? "–", "antes de comentar e de responder"],
-    ["Verificação em espera", num(es.n || 0), "itens parados por busca bloqueada ou roteador lento"]];
+    ["Verificação em espera", num(es.n || 0), "itens parados por busca bloqueada ou roteador lento"],
+    // 17/11: Reator — indicador em queda puxa uma alavanca (degraus com teto, volta sozinho)
+    ["Reação a queda", ((x.reator || {}).ativas || []).length ? `${x.reator.ativas.length} ${x.reator.ativas.length === 1 ? "ação" : "ações"}` : "nenhuma",
+      ((x.reator || {}).ativas || []).map(a => `${a.indicador} → ${a.acao}`).join(" · ") || "nenhum indicador caindo nos últimos 3 dias"]];
   document.getElementById("t-operacao").innerHTML = blocos.map(([t, v, sub]) =>
     `<div class="col-6 col-lg-2"><div class="subheader">${t}</div><div class="h2 mb-0">${v}</div><div class="text-secondary small mt-1">${esc(sub)}</div></div>`).join("");
 }
