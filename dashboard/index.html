@@ -329,6 +329,16 @@
             <div class="list-group list-group-flush" id="l-achados"></div>
           </div></div>
 
+          <div class="col-12"><div class="card">
+            <div class="card-header"><h3 class="card-title">Placar de engajamento · todos os tipos</h3>
+              <div class="card-actions text-secondary small" id="placar-meta">últimos 7 dias × 7 anteriores · pontos por publicação</div></div>
+            <div class="card-table table-responsive">
+              <table class="table table-sm table-vcenter"><thead><tr><th>Rede</th><th class="text-end" title="pontos de engajamento ÷ publicações">Por publicação</th>
+                <th class="text-end">Variação</th><th class="text-end">Pontos</th><th class="text-end">Publicações</th>
+                <th>Engajamento lido</th><th title="o que a rede oferece e o agente ainda não lê">Ainda não lido</th></tr></thead>
+              <tbody id="t-placar"></tbody></table>
+            </div>
+          </div></div>
           <div class="col-6 col-lg-2"><div class="card"><div class="card-body">
             <div class="subheader" title="Seguidores ganhos no período ÷ impressões somadas × 1000. É o que diz se a visibilidade vira público.">Seguidores / mil impressões</div>
             <div class="h1 mb-0" id="en-conv">–</div><div class="text-secondary small mt-1" id="en-conv-sub">–</div></div></div></div>
@@ -637,7 +647,7 @@ let POR_PAGINA = 10;
 const PAGINAS = {geral: ["i-rec", "i-conv", "i-inter", "i-impr", "i-seg10", "i-marca", "k-pub", "k-eng", "k-taxa", "k-aprov", "k-seg", "k-alvo", "g-dia", "limites", "t-tendencias"], seguidores: ["t-metas", "t-seguidores"],
   seguindo: ["sg-total", "sg-hoje", "sg-volta", "sg-fila", "t-seguindo", "t-seguindo-origem"],
   autoria: ["au-posts", "au-achados", "au-resp", "au-news", "t-autoria", "l-achados"],
-  previsao: ["t-previsao"], engajamento: ["t-pilares", "en-conv", "en-vpa", "en-conversa", "en-vel", "en-ent", "en-rec", "t-engaj", "en-apoio"],
+  previsao: ["t-previsao"], engajamento: ["t-placar", "t-pilares", "en-conv", "en-vpa", "en-conversa", "en-vel", "en-ent", "en-rec", "t-engaj", "en-apoio"],
   alvos: ["a-resumo", "t-alvos", "t-lista", "t-maiores"], sobre: ["s-fluxo", "s-papeis", "s-protecoes", "s-numeros", "s-tecnica"],
   resultados: ["t-operacao", "g-hora", "t-grupo"], itens: ["t-itens"], pautas: ["ideias"], enxame: ["x-resumo", "x-mapa", "t-paises", "t-enxame", "t-coord", "t-eventos"]};
 const ROTULOS = {enxame: "Enxame de agentes", sobre: "Como funciona", geral: "Visão geral", alvos: "Qualidade dos alvos", seguidores: "Seguidores", seguindo: "Seguindo", autoria: "Autoridade", engajamento: "Engajamento", previsao: "Previsão", resultados: "Resultados", itens: "Itens", pautas: "Pautas"};
@@ -1030,6 +1040,25 @@ function autoria(au) {
 
 
 // ---------- engajamento: indicadores que mudam decisões ----------
+function placar(p) {  // 20/11: engajamento de todos os tipos por rede (engajamento.py)
+  const el = document.getElementById("t-placar");
+  if (!el) return;
+  if (!p || !p.redes) { el.innerHTML = '<tr><td colspan="7" class="vazio">Placar ainda não calculado.</td></tr>'; return; }
+  const pesos = p.pesos || {}, tr = '<span class="text-secondary">–</span>';
+  document.getElementById("placar-meta").textContent = `últimos ${p.dias} dias × ${p.dias} anteriores · pesos: resposta ${pesos.resposta}, seguidor ${pesos.seguidor}, compartilhamento ${pesos.compartilhou}, menção ${pesos.mencionou}, curtida ${pesos.curtida}`;
+  const linhas = Object.entries(p.redes).filter(([r]) => F.redes.has(r)).sort((a, b) => (b[1].por_publicacao ?? -1e9) - (a[1].por_publicacao ?? -1e9));
+  el.innerHTML = linhas.map(([r, v]) => {
+    const pp = v.por_publicacao, ant = v.anterior;
+    const delta = pp !== null && ant ? (pp - ant) / Math.abs(ant) : null;
+    const cls = delta === null ? "text-secondary" : delta > 0.05 ? "text-green" : delta < -0.05 ? "text-red" : "text-secondary";
+    const tipos = Object.entries(v.tipos || {}).filter(([, n]) => n).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
+      .map(([k, n]) => `<span class="badge bg-secondary-lt me-1 mb-1" title="${esc((v.tipos_nomes || {})[k] || k)}">${esc((v.tipos_nomes || {})[k] || k)} ${n > 0 ? "" : ""}${num(Math.round(n))}</span>`).join("") || tr;
+    const lac = (v.lacunas || []).map(x => `<span class="badge bg-warning-lt me-1 mb-1">${esc(x)}</span>`).join("") || tr;
+    return `<tr><td class="text-nowrap">${ponto(r)}${nome(r)}</td><td class="text-end fw-bold">${pp === null ? tr : pp.toLocaleString("pt-BR")}</td>
+      <td class="text-end ${cls}">${delta === null ? tr : (delta > 0 ? "+" : "") + Math.round(100 * delta) + "%"}</td>
+      <td class="text-end">${num(Math.round(v.pontos))}</td><td class="text-end">${num(v.publicacoes)}</td><td class="small">${tipos}</td><td class="small">${lac}</td></tr>`;
+  }).join("") || '<tr><td colspan="7" class="vazio">Nada publicado com esses filtros.</td></tr>';
+}
 function engajamento(serie) {
   const set = (id, v) => document.getElementById(id).textContent = v;
   const pct = (a, b) => b ? Math.round(100 * a / b) + "%" : "–", med = l => l.length ? l.reduce((a, b) => a + b, 0) / l.length : null;
@@ -1469,7 +1498,7 @@ function aplicar() {
   const comparar = F.p < 90 && filtrados(1, false).length > 0;  // sem dado no período anterior a seta só repetiria o total
   kpis(filtrados(0), comparar ? filtrados(1) : [], filtrados(0, false), comparar ? filtrados(1, false) : [], comparar);
   graficoDia(filtrados(0)); graficoHora(filtrados(0));
-  limites(dados.limites || {}); indicadores(dados.indicadores); tendencias(dados.tendencias); enxame(dados.enxame); seguidores(dados.seguidores || []); metas(dados.seguidores || [], filtrados(0, false)); previsao(); seguindo(dados.seguindo, dados.seguidores || []); autoria(dados.autoria); engajamento(dados.seguidores || []); alvos(filtrados(0, false)); grupo(); tabela();
+  limites(dados.limites || {}); indicadores(dados.indicadores); tendencias(dados.tendencias); enxame(dados.enxame); seguidores(dados.seguidores || []); metas(dados.seguidores || [], filtrados(0, false)); previsao(); seguindo(dados.seguindo, dados.seguidores || []); autoria(dados.autoria); placar(dados.placar); engajamento(dados.seguidores || []); alvos(filtrados(0, false)); grupo(); tabela();
 }
 async function carregar() {
   try {
