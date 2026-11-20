@@ -106,6 +106,8 @@
           <div class="col-12">
             <ul class="nav nav-pills gap-1" id="paginas" role="tablist" aria-label="Páginas do dashboard">
               <li class="nav-item"><a class="nav-link" href="#" data-pg="geral" role="tab">Visão geral</a></li>
+              <li class="nav-item"><a class="nav-link" href="#" data-pg="indicadores" role="tab">Indicadores <span class="badge bg-secondary-lt ms-1" id="pg-ind-n"></span></a></li>
+              <li class="nav-item" id="pg-eventos-item"><a class="nav-link" href="#" data-pg="eventos" role="tab">Eventos <span class="badge bg-green-lt ms-1" id="pg-ev-n">ao vivo</span></a></li>
               <li class="nav-item"><a class="nav-link" href="#" data-pg="seguidores" role="tab">Seguidores</a></li>
               <li class="nav-item"><a class="nav-link" href="#" data-pg="seguindo" role="tab">Seguindo</a></li>
               <li class="nav-item"><a class="nav-link" href="#" data-pg="autoria" role="tab">Autoridade</a></li>
@@ -169,6 +171,22 @@
           <b>Roteador de IA fora do ar</b>: o agente parou de escrever e comentar até ele voltar (<span></span>).
         </div>
         <div class="row row-deck row-cards">
+
+          <!-- 20/11: eventos em tempo real (agente.log via /api/eventos); só no painel do mini -->
+          <div class="col-12"><div class="card"><div class="card-header flex-wrap gap-2"><h3 class="card-title">Eventos em tempo real</h3>
+            <div class="card-actions d-flex flex-wrap gap-2 align-items-center">
+              <select class="form-select form-select-sm w-auto" id="ev-rede" aria-label="Rede"><option value="">Todas as redes</option></select>
+              <input type="search" class="form-control form-control-sm w-auto" id="ev-busca" placeholder="Filtrar texto…" aria-label="Filtrar texto">
+              <button class="btn btn-sm" id="ev-pausa">Pausar</button>
+              <span class="text-secondary small" id="ev-estado">–</span></div></div>
+            <div class="card-body pb-1"><div class="d-flex flex-wrap gap-1" id="ev-tipos"></div></div>
+            <div class="card-body pt-1" style="max-height:70vh;overflow:auto"><div id="t-eventos" class="font-monospace small"></div></div></div></div>
+
+          <!-- 20/11: indicadores com seta em relação ao período anterior (kpis.py) -->
+          <div class="col-12"><div class="card"><div class="card-header"><h3 class="card-title">Indicadores · 7 dias × 7 anteriores</h3>
+            <div class="card-actions text-secondary small" id="kpis-meta">verde = melhorou · vermelho = piorou · resultados medidos comparam os 7 dias até anteontem</div></div>
+            <div class="card-body"><div class="row g-2" id="t-kpis"></div>
+              <div class="subheader mt-3">Ações em curso</div><div class="list-group list-group-flush" id="kpis-acoes"></div></div></div></div>
 
           <!-- Resultado (7 dias, fixo): relação e negócio, o que a estratégia quer mover -->
           <div class="col-6 col-lg-2"><div class="card"><div class="card-body">
@@ -644,13 +662,13 @@ if (PUBLICO) document.getElementById("link-painel").remove();
 let dados = null, gDia = null, gHora = null, campo = "rede", ordem = ["quando", -1], pagina = 0;
 let POR_PAGINA = 10;
 // ---------- páginas (cada uma cabe na tela, sem rolar) ----------
-const PAGINAS = {geral: ["i-rec", "i-conv", "i-inter", "i-impr", "i-seg10", "i-marca", "k-pub", "k-eng", "k-taxa", "k-aprov", "k-seg", "k-alvo", "g-dia", "limites", "t-tendencias"], seguidores: ["t-metas", "t-seguidores"],
+const PAGINAS = {eventos: ["t-eventos"], indicadores: ["t-kpis"], geral: ["i-rec", "i-conv", "i-inter", "i-impr", "i-seg10", "i-marca", "k-pub", "k-eng", "k-taxa", "k-aprov", "k-seg", "k-alvo", "g-dia", "limites", "t-tendencias"], seguidores: ["t-metas", "t-seguidores"],
   seguindo: ["sg-total", "sg-hoje", "sg-volta", "sg-fila", "t-seguindo", "t-seguindo-origem"],
   autoria: ["au-posts", "au-achados", "au-resp", "au-news", "t-autoria", "l-achados"],
   previsao: ["t-previsao"], engajamento: ["t-placar", "t-pilares", "en-conv", "en-vpa", "en-conversa", "en-vel", "en-ent", "en-rec", "t-engaj", "en-apoio"],
   alvos: ["a-resumo", "t-alvos", "t-lista", "t-maiores"], sobre: ["s-fluxo", "s-papeis", "s-protecoes", "s-numeros", "s-tecnica"],
   resultados: ["t-operacao", "g-hora", "t-grupo"], itens: ["t-itens"], pautas: ["ideias"], enxame: ["x-resumo", "x-mapa", "t-paises", "t-enxame", "t-coord", "t-eventos"]};
-const ROTULOS = {enxame: "Enxame de agentes", sobre: "Como funciona", geral: "Visão geral", alvos: "Qualidade dos alvos", seguidores: "Seguidores", seguindo: "Seguindo", autoria: "Autoridade", engajamento: "Engajamento", previsao: "Previsão", resultados: "Resultados", itens: "Itens", pautas: "Pautas"};
+const ROTULOS = {eventos: "Eventos em tempo real", indicadores: "Indicadores", enxame: "Enxame de agentes", sobre: "Como funciona", geral: "Visão geral", alvos: "Qualidade dos alvos", seguidores: "Seguidores", seguindo: "Seguindo", autoria: "Autoridade", engajamento: "Engajamento", previsao: "Previsão", resultados: "Resultados", itens: "Itens", pautas: "Pautas"};
 let pg = "geral";
 function marcarPaginas() {
   const linha = document.querySelector(".row-cards");
@@ -1040,6 +1058,85 @@ function autoria(au) {
 
 
 // ---------- engajamento: indicadores que mudam decisões ----------
+// ---------- 20/11: eventos em tempo real (só no painel do mini: o log tem nomes e links) ----------
+const EV = {pos: null, linhas: [], pausa: false, tipos: new Set(), timer: null};
+const EV_TIPOS = {erro: ["Erros", "red"], publicado: ["Publicado", "green"], conversa: ["Conversas", "azure"], sessao: ["Sessões", "purple"],
+  medicao: ["Medição", "cyan"], decisao: ["Decisões", "orange"], lote: ["Lotes e fila", "yellow"], busca: ["Busca", "teal"], outro: ["Outros", "secondary"]};
+function eventosIniciar() {
+  if (PUBLICO) { const it = document.getElementById("pg-eventos-item"); if (it) it.remove(); return; }
+  const tipos = document.getElementById("ev-tipos");
+  Object.keys(EV_TIPOS).forEach(t => EV.tipos.add(t));
+  tipos.innerHTML = Object.entries(EV_TIPOS).map(([t, [rot, cor]]) =>
+    `<button class="btn btn-sm btn-${cor === "secondary" ? "outline-secondary" : cor} ev-tipo active" data-t="${t}" aria-pressed="true">${rot} <span class="badge bg-white text-dark ms-1" id="ev-n-${t}">0</span></button>`).join("");
+  tipos.addEventListener("click", e => { const b = e.target.closest(".ev-tipo"); if (!b) return;
+    const t = b.dataset.t; if (EV.tipos.has(t)) { EV.tipos.delete(t); b.classList.remove("active"); b.style.opacity = .45; } else { EV.tipos.add(t); b.classList.add("active"); b.style.opacity = 1; }
+    b.setAttribute("aria-pressed", EV.tipos.has(t)); eventosDesenhar(); });
+  const sel = document.getElementById("ev-rede");
+  sel.innerHTML += REDES.map(r => `<option value="${r}">${nome(r)}</option>`).join("");
+  sel.addEventListener("change", eventosDesenhar);
+  document.getElementById("ev-busca").addEventListener("input", eventosDesenhar);
+  document.getElementById("ev-pausa").addEventListener("click", e => { EV.pausa = !EV.pausa; e.target.textContent = EV.pausa ? "Continuar" : "Pausar"; eventosEstado(); });
+  eventosBuscar();
+  EV.timer = setInterval(() => { if (pg === "eventos" && !EV.pausa && !document.hidden) eventosBuscar(); }, 2000);
+}
+function eventosEstado(erro) {
+  const el = document.getElementById("ev-estado"), b = document.getElementById("pg-ev-n");
+  el.textContent = erro ? "sem conexão com o agente" : EV.pausa ? "pausado" : `ao vivo · atualizado ${new Date().toLocaleTimeString("pt-BR")}`;
+  if (b) { b.className = "badge ms-1 " + (erro ? "bg-red-lt" : EV.pausa ? "bg-secondary-lt" : "bg-green-lt"); b.textContent = erro ? "offline" : EV.pausa ? "pausado" : "ao vivo"; }
+}
+async function eventosBuscar() {
+  try {
+    const r = await fetch("/api/eventos" + (EV.pos !== null ? "?pos=" + EV.pos : ""), {cache: "no-store"}).then(x => x.json());
+    EV.pos = r.pos;
+    if (r.linhas && r.linhas.length) { EV.linhas = EV.linhas.concat(r.linhas).slice(-2000); eventosDesenhar(); }
+    eventosEstado();
+  } catch (e) { eventosEstado(true); }
+}
+function eventosDesenhar() {
+  const rede = document.getElementById("ev-rede").value, q = document.getElementById("ev-busca").value.trim().toLowerCase();
+  const cont = {}; EV.linhas.forEach(l => cont[l.tipo] = (cont[l.tipo] || 0) + 1);
+  Object.keys(EV_TIPOS).forEach(t => { const n = document.getElementById("ev-n-" + t); if (n) n.textContent = cont[t] || 0; });
+  const vis = EV.linhas.filter(l => EV.tipos.has(l.tipo) && (!rede || l.rede === rede) && (!q || l.texto.toLowerCase().includes(q))).slice(-500).reverse();
+  document.getElementById("t-eventos").innerHTML = vis.map(l => {
+    const [rot, cor] = EV_TIPOS[l.tipo] || EV_TIPOS.outro;
+    return `<div class="d-flex gap-2 py-1 border-bottom"><span class="text-secondary text-nowrap">${esc(l.hora)}</span>
+      <span class="badge bg-${cor}-lt text-nowrap" style="min-width:6.5rem">${rot}</span>${l.rede ? `<span class="text-nowrap">${ponto(l.rede)}${nome(l.rede)}</span>` : ""}
+      <span class="${l.tipo === "erro" ? "text-red" : ""}" style="word-break:break-word">${esc(l.texto)}</span></div>`;
+  }).join("") || '<div class="text-secondary">Nenhum evento com esses filtros.</div>';
+}
+function kpisPainel(k, reator) {  // 20/11: indicadores com seta (kpis.py) e as ações do Reator para os que caem ou zeram
+  const el = document.getElementById("t-kpis");
+  const ativas = (reator || {}).ativas || [], porChave = {};
+  ativas.forEach(a => { if (a.chave) porChave[a.chave] = a; });
+  const la = document.getElementById("kpis-acoes");
+  if (la) la.innerHTML = ativas.map(a => `<div class="list-group-item px-0 py-2"><div class="d-flex gap-2 align-items-start">
+      <span class="badge ${a.tipo === "zerado" ? "bg-orange-lt" : "bg-red-lt"} text-nowrap">${a.tipo === "zerado" ? "zerado" : "caindo"}</span>
+      <div><div class="fw-bold">${esc(a.acao)}</div><div class="text-secondary small">${esc(a.motivo)}${a.desde ? " · desde " + esc(a.desde.slice(8, 10) + "/" + a.desde.slice(5, 7)) : ""}</div></div></div></div>`).join("")
+    || '<div class="text-secondary small py-2">Nenhuma ação em curso: nenhum indicador caindo ou zerado na última leitura (1× por dia).</div>';
+  if (!el) return;
+  if (!k || !k.itens) { el.innerHTML = '<div class="text-secondary">Indicadores ainda não calculados.</div>'; return; }
+  const fmt = (v, u) => v === null || v === undefined ? "–" : (Number.isInteger(v) ? num(v) : String(v).replace(".", ",")) + (u === "%" ? "%" : u === "h" ? " h" : "");
+  const GRUPOS = {resultado: "Resultado", "relação": "Relação", "operação": "Operação"};
+  let altos = 0, baixos = 0;
+  el.innerHTML = Object.entries(GRUPOS).map(([g, rot]) => {
+    const itens = k.itens.filter(i => i.grupo === g);
+    return `<div class="col-12"><div class="subheader mt-2">${rot}</div></div>` + itens.map(i => {
+      if (i.bom === true) altos++; else if (i.bom === false) baixos++;
+      const cor = i.bom === true ? "text-green" : i.bom === false ? "text-red" : "text-secondary";
+      const seta = i.seta === "sobe" ? "▲" : i.seta === "desce" ? "▼" : i.anterior === null || i.anterior === undefined ? "" : "=";
+      const varp = i.variacao_pct === null || i.variacao_pct === undefined ? "" : ` ${i.variacao_pct > 0 ? "+" : ""}${i.variacao_pct}%`;
+      const dica = `antes: ${fmt(i.anterior, i.unidade)}${i.melhor === "desce" ? " · cair é bom" : ""}${i.dica ? " · " + i.dica : ""}`;
+      return `<div class="col-6 col-md-4 col-xl-2"><div class="card card-sm"><div class="card-body">
+        <div class="subheader text-truncate" title="${esc(i.nome)}">${esc(i.nome)}</div>
+        <div class="d-flex align-items-baseline"><div class="h2 mb-0 me-2">${fmt(i.valor, i.unidade)}</div>
+          <div class="kpi-delta ms-auto ${cor}" title="${esc(dica)}">${seta}${varp}</div></div>
+        <div class="text-secondary small mt-1 text-truncate" title="${esc(dica)}">${esc(dica)}</div>
+        ${porChave[i.chave] ? `<div class="small mt-1 text-orange text-truncate" title="${esc(porChave[i.chave].acao)}">⚙ ${esc(porChave[i.chave].acao)}</div>` : ""}</div></div></div>`;
+    }).join("");
+  }).join("");
+  const b = document.getElementById("pg-ind-n");
+  if (b) { b.textContent = `${altos}▲ ${baixos}▼`; b.title = `${altos} indicadores melhoraram e ${baixos} pioraram`; }
+}
 function placar(p) {  // 20/11: engajamento de todos os tipos por rede (engajamento.py)
   const el = document.getElementById("t-placar");
   if (!el) return;
@@ -1498,7 +1595,7 @@ function aplicar() {
   const comparar = F.p < 90 && filtrados(1, false).length > 0;  // sem dado no período anterior a seta só repetiria o total
   kpis(filtrados(0), comparar ? filtrados(1) : [], filtrados(0, false), comparar ? filtrados(1, false) : [], comparar);
   graficoDia(filtrados(0)); graficoHora(filtrados(0));
-  limites(dados.limites || {}); indicadores(dados.indicadores); tendencias(dados.tendencias); enxame(dados.enxame); seguidores(dados.seguidores || []); metas(dados.seguidores || [], filtrados(0, false)); previsao(); seguindo(dados.seguindo, dados.seguidores || []); autoria(dados.autoria); placar(dados.placar); engajamento(dados.seguidores || []); alvos(filtrados(0, false)); grupo(); tabela();
+  limites(dados.limites || {}); indicadores(dados.indicadores); tendencias(dados.tendencias); enxame(dados.enxame); seguidores(dados.seguidores || []); metas(dados.seguidores || [], filtrados(0, false)); previsao(); seguindo(dados.seguindo, dados.seguidores || []); autoria(dados.autoria); placar(dados.placar); kpisPainel(dados.kpis, (dados.indicadores || {}).reator); engajamento(dados.seguidores || []); alvos(filtrados(0, false)); grupo(); tabela();
 }
 async function carregar() {
   try {
@@ -1521,6 +1618,7 @@ async function carregar() {
 }
 
 lerHash(); marcarPaginas(); ligarAbas(); montarControles(); sincronizarControles(); mostrarPagina();
+eventosIniciar();  // 20/11: aba Eventos (só no painel do mini)
 addEventListener("hashchange", () => { lerHash(); aplicar(); mostrarPagina(); });
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", e => {
   document.documentElement.setAttribute("data-bs-theme", e.matches ? "dark" : "light");
