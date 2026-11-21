@@ -194,7 +194,7 @@
               <button class="btn btn-sm" id="ev-pausa">Pausar</button>
               <span class="text-secondary small" id="ev-estado">–</span></div></div>
             <div class="card-body pb-1"><div class="d-flex flex-wrap gap-1" id="ev-tipos"></div></div>
-            <div class="card-body pt-1" style="max-height:70vh;overflow:auto"><div id="t-eventos" class="font-monospace small"></div></div></div></div>
+            <div class="card-body pt-1" style="max-height:70vh;overflow:auto"><div id="ev-linhas" class="font-monospace small"></div><!-- 22/11: era "t-eventos", o mesmo id da tabela do Enxame: a aba ficava vazia --></div></div></div>
 
           <!-- 20/11: indicadores com seta em relação ao período anterior (kpis.py) -->
           <div class="col-12"><div class="card"><div class="card-header"><h3 class="card-title">Indicadores · 7 dias × 7 anteriores</h3>
@@ -485,6 +485,13 @@
               <table class="table table-sm table-vcenter text-center"><thead><tr id="t-enxame-cab"></tr></thead><tbody id="t-enxame"></tbody></table>
             </div>
           </div></div>
+          <!-- 22/11: boletim de desempenho dos 200 agentes (boletim.py) -->
+          <div class="col-12"><div class="card"><div class="card-header flex-wrap gap-2"><h3 class="card-title">Boletim dos agentes · 7 dias × 7 anteriores</h3>
+            <div class="card-actions d-flex flex-wrap gap-1" id="bol-filtros"></div></div>
+            <div class="card-body pb-0 text-secondary small" id="bol-sobre"></div>
+            <div class="table-responsive" style="max-height:60vh;overflow:auto"><table class="table table-sm table-vcenter">
+              <thead><tr><th>Agente</th><th>Enxame</th><th class="text-end">Ações</th><th>Indicador que ele move</th><th class="text-end">Antes → agora</th><th>Situação</th></tr></thead>
+              <tbody id="t-boletim"></tbody></table></div></div></div>
           <div class="col-lg-5"><div class="card">
             <div class="card-header"><h3 class="card-title">Coordenadores</h3></div>
             <div class="card-table table-responsive">
@@ -676,12 +683,12 @@ if (PUBLICO) document.getElementById("link-painel").remove();
 let dados = null, gDia = null, gHora = null, campo = "rede", ordem = ["quando", -1], pagina = 0;
 let POR_PAGINA = 10;
 // ---------- páginas (cada uma cabe na tela, sem rolar) ----------
-const PAGINAS = {comercial: ["c-fila", "c-pipeline", "c-funil"], eventos: ["t-eventos"], indicadores: ["t-kpis"], geral: ["i-rec", "i-conv", "i-inter", "i-impr", "i-seg10", "i-marca", "k-pub", "k-eng", "k-taxa", "k-aprov", "k-seg", "k-alvo", "g-dia", "limites", "t-tendencias"], seguidores: ["t-metas", "t-seguidores"],
+const PAGINAS = {comercial: ["c-fila", "c-pipeline", "c-funil"], eventos: ["ev-linhas"], indicadores: ["t-kpis"], geral: ["i-rec", "i-conv", "i-inter", "i-impr", "i-seg10", "i-marca", "k-pub", "k-eng", "k-taxa", "k-aprov", "k-seg", "k-alvo", "g-dia", "limites", "t-tendencias"], seguidores: ["t-metas", "t-seguidores"],
   seguindo: ["sg-total", "sg-hoje", "sg-volta", "sg-fila", "t-seguindo", "t-seguindo-origem"],
   autoria: ["au-posts", "au-achados", "au-resp", "au-news", "t-autoria", "l-achados"],
   previsao: ["t-previsao"], engajamento: ["t-placar", "t-pilares", "en-conv", "en-vpa", "en-conversa", "en-vel", "en-ent", "en-rec", "t-engaj", "en-apoio"],
   alvos: ["a-resumo", "t-alvos", "t-lista", "t-maiores"], sobre: ["s-fluxo", "s-papeis", "s-protecoes", "s-numeros", "s-tecnica"],
-  resultados: ["t-operacao", "g-hora", "t-grupo"], itens: ["t-itens"], pautas: ["ideias"], enxame: ["x-resumo", "x-mapa", "t-paises", "t-enxame", "t-coord", "t-eventos"]};
+  resultados: ["t-operacao", "g-hora", "t-grupo"], itens: ["t-itens"], pautas: ["ideias"], enxame: ["x-resumo", "t-boletim", "x-mapa", "t-paises", "t-enxame", "t-coord", "t-eventos"]};
 const ROTULOS = {comercial: "Comercial", eventos: "Eventos em tempo real", indicadores: "Indicadores", enxame: "Enxame de agentes", sobre: "Como funciona", geral: "Visão geral", alvos: "Qualidade dos alvos", seguidores: "Seguidores", seguindo: "Seguindo", autoria: "Autoridade", engajamento: "Engajamento", previsao: "Previsão", resultados: "Resultados", itens: "Itens", pautas: "Pautas"};
 let pg = "geral";
 function marcarPaginas() {
@@ -1168,7 +1175,7 @@ function eventosDesenhar() {
   const cont = {}; EV.linhas.forEach(l => cont[l.tipo] = (cont[l.tipo] || 0) + 1);
   Object.keys(EV_TIPOS).forEach(t => { const n = document.getElementById("ev-n-" + t); if (n) n.textContent = cont[t] || 0; });
   const vis = EV.linhas.filter(l => EV.tipos.has(l.tipo) && (!rede || l.rede === rede) && (!q || l.texto.toLowerCase().includes(q))).slice(-500).reverse();
-  document.getElementById("t-eventos").innerHTML = vis.map(l => {
+  document.getElementById("ev-linhas").innerHTML = vis.map(l => {
     const [rot, cor] = EV_TIPOS[l.tipo] || EV_TIPOS.outro;
     return `<div class="d-flex gap-2 py-1 border-bottom"><span class="text-secondary text-nowrap">${esc(l.hora)}</span>
       <span class="badge bg-${cor}-lt text-nowrap" style="min-width:6.5rem">${rot}</span>${l.rede ? `<span class="text-nowrap">${ponto(l.rede)}${nome(l.rede)}</span>` : ""}
@@ -1506,6 +1513,7 @@ function mapaMundi() {  // desenha só com a aba visível (escondido, o mapa fic
 addEventListener("resize", () => { if (gMapa && pg === "enxame") try { gMapa.updateSize(); } catch (e) {} });
 function enxame(x) {
   if (!x) return;
+  boletim(x.boletim);
   mapaMundi();
   document.getElementById("pg-enxame-n").textContent = x.total;
   const hora = t => t ? new Date(t * 1000).toLocaleTimeString("pt-BR", {hour: "2-digit", minute: "2-digit"}) : "–";
@@ -1533,6 +1541,29 @@ function enxame(x) {
     <td>${esc(EVENTO[e.evento] || e.evento)}${e.n > 1 ? ` <span class="text-secondary">(${num(e.n)})</span>` : ""}</td><td class="small text-secondary texto-com">${esc(e.detalhe || "")}</td></tr>`).join("")
     || '<tr><td colspan="4" class="text-secondary">Nenhum evento ainda.</td></tr>';
 }
+// 22/11: boletim de desempenho — o que cada agente fez e se o indicador dele melhorou
+const BOL = {filtro: "problema", dados: null};
+const BOL_SIT = {"atenção": ["red", "agiu e o indicador piorou"], parado: ["orange", "deveria ter agido e não agiu"], rendendo: ["green", "agiu e o indicador melhorou"],
+  ativo: ["azure", "agiu; indicador estável ou sem medida"], "de plantão": ["secondary", "só age quando algo acontece"], novo: ["purple", "entrou em 21/11; ainda sem 7 dias de registro"], desligado: ["secondary", "Fase 1 ou 2"]};
+function boletim(b) {
+  const el = document.getElementById("t-boletim"); if (!el) return;
+  if (!b) { el.innerHTML = '<tr><td colspan="6" class="text-secondary">O primeiro boletim sai na rodada diária (a partir das 07:00).</td></tr>'; return; }
+  BOL.dados = b;
+  const fs = [["problema", "Atenção e parados", (b.resumo["atenção"] || 0) + (b.resumo.parado || 0)], ...Object.keys(BOL_SIT).map(k => [k, k[0].toUpperCase() + k.slice(1), b.resumo[k] || 0]), ["todos", "Todos", b.agentes.length]];
+  document.getElementById("bol-filtros").innerHTML = fs.map(([k, rot, n]) => `<button class="btn btn-sm ${BOL.filtro === k ? "btn-primary" : ""}" data-bol="${k}">${rot} <span class="badge bg-secondary-lt ms-1">${n}</span></button>`).join("");
+  document.getElementById("bol-sobre").textContent = `calculado ${new Date(b.quando * 1000).toLocaleString("pt-BR", {day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit"})} · ` +
+    Object.entries(b.resumo).map(([k, n]) => `${n} ${k}`).join(" · ") + " · custo por agente (modelo e Chrome) ainda não é medido";
+  const sel = b.agentes.filter(a => BOL.filtro === "todos" || (BOL.filtro === "problema" ? ["atenção", "parado"].includes(a.situacao) : a.situacao === BOL.filtro));
+  const n = v => v === null || v === undefined ? "–" : (typeof v === "number" ? num(Math.round(v * 10) / 10) : esc(v));
+  el.innerHTML = sel.map(a => { const [cor, dica] = BOL_SIT[a.situacao] || ["secondary", ""];
+    const quem = a.rede ? `${a.nome} · ${nome(a.rede)}` : a.nome;
+    const seta = a.bom === null ? "" : `<span class="${a.bom ? "text-green" : "text-red"}">${a.valor > a.anterior ? "▲" : "▼"}</span> `;
+    return `<tr><td class="fw-bold text-nowrap">${esc(quem)}</td><td class="small text-secondary">${esc(a.grupo)}</td>
+      <td class="text-end">${a.acoes}<div class="small text-secondary">antes ${a.acoes_ant}</div></td><td class="small">${esc(a.indicador)}</td>
+      <td class="text-end text-nowrap">${seta}${n(a.anterior)} → ${n(a.valor)}</td><td><span class="badge bg-${cor}-lt" title="${esc(dica)}">${esc(a.situacao)}</span></td></tr>`; }).join("")
+    || '<tr><td colspan="6" class="text-secondary">Nenhum agente nesta situação.</td></tr>';
+}
+document.addEventListener("click", e => { const b = e.target.closest("[data-bol]"); if (!b) return; BOL.filtro = b.dataset.bol; boletim(BOL.dados); });
 function tendencias(t) {
   const el = document.getElementById("t-tendencias"); if (!el) return;
   const ts = (t && t.temas) || [];
