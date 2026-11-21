@@ -108,6 +108,7 @@
               <li class="nav-item"><a class="nav-link" href="#" data-pg="geral" role="tab">Visão geral</a></li>
               <li class="nav-item"><a class="nav-link" href="#" data-pg="indicadores" role="tab">Indicadores <span class="badge bg-secondary-lt ms-1" id="pg-ind-n"></span></a></li>
               <li class="nav-item" id="pg-eventos-item"><a class="nav-link" href="#" data-pg="eventos" role="tab">Eventos <span class="badge bg-green-lt ms-1" id="pg-ev-n">ao vivo</span></a></li>
+              <li class="nav-item" id="pg-comercial-item"><a class="nav-link" href="#" data-pg="comercial" role="tab">Comercial <span class="badge bg-orange-lt ms-1" id="pg-com-n"></span></a></li>
               <li class="nav-item"><a class="nav-link" href="#" data-pg="seguidores" role="tab">Seguidores</a></li>
               <li class="nav-item"><a class="nav-link" href="#" data-pg="seguindo" role="tab">Seguindo</a></li>
               <li class="nav-item"><a class="nav-link" href="#" data-pg="autoria" role="tab">Autoridade</a></li>
@@ -171,6 +172,19 @@
           <b>Roteador de IA fora do ar</b>: o agente parou de escrever e comentar até ele voltar (<span></span>).
         </div>
         <div class="row row-deck row-cards">
+
+          <!-- 21/11: enxame Fase 0 — fila do dono, pipeline, funil e auditores (/api/comercial); só no painel do mini -->
+          <div class="col-12"><div class="card"><div class="card-header"><h3 class="card-title">Para você resolver</h3>
+            <div class="card-actions text-secondary small" id="c-fila-n">–</div></div>
+            <div class="card-body" style="max-height:55vh;overflow:auto"><div id="c-fila"></div></div></div></div>
+          <div class="col-lg-7"><div class="card"><div class="card-header"><h3 class="card-title">Pipeline</h3>
+            <div class="card-actions text-secondary small">o agente põe em morno e lead; o resto é você quem marca</div></div>
+            <div class="table-responsive"><table class="table table-sm table-vcenter"><thead><tr><th>Pessoa</th><th>Rede</th><th>Por quê</th><th>Etapa</th></tr></thead>
+            <tbody id="c-pipeline"></tbody></table></div></div></div>
+          <div class="col-lg-5"><div class="card"><div class="card-header"><h3 class="card-title">Funil · 30 dias</h3></div>
+            <div class="card-body" id="c-funil"></div>
+            <div class="card-header"><h3 class="card-title">Auditores</h3></div>
+            <div class="card-body small" id="c-auditoria"></div></div></div>
 
           <!-- 20/11: eventos em tempo real (agente.log via /api/eventos); só no painel do mini -->
           <div class="col-12"><div class="card"><div class="card-header flex-wrap gap-2"><h3 class="card-title">Eventos em tempo real</h3>
@@ -511,7 +525,7 @@
               <li><b>Autor</b>: posts próprios de resultados medidos, conversas reaproveitadas no formato de cada rede e carrossel.</li>
               <li><b>Impressões e Posts de marca</b>: quantas vezes você foi visto no LinkedIn e no X, e quantos posts próprios saíram por pilar (quem sou, o que faço, oferta). Pedido comercial e chamada de palestra continuam virando aviso no painel.</li>
               <li><b>Experimentador e Maestro</b>: testam uma alavanca por vez e priorizam cada rede pelo retorno medido.</li>
-              <li>Todos formam o <a href="#" data-ir="enxame">enxame de 107 agentes</a>: 14 redes × 7 funções + 9 coordenadores.</li>
+              <li>Todos formam o <a href="#" data-ir="enxame">enxame de 200 agentes</a>: 14 redes × 10 funções + 60 coordenadores em 9 enxames.</li>
             </ul></div>
           </div></div>
           <div class="col-md-6 col-lg-3"><div class="card" id="s-protecoes">
@@ -662,13 +676,13 @@ if (PUBLICO) document.getElementById("link-painel").remove();
 let dados = null, gDia = null, gHora = null, campo = "rede", ordem = ["quando", -1], pagina = 0;
 let POR_PAGINA = 10;
 // ---------- páginas (cada uma cabe na tela, sem rolar) ----------
-const PAGINAS = {eventos: ["t-eventos"], indicadores: ["t-kpis"], geral: ["i-rec", "i-conv", "i-inter", "i-impr", "i-seg10", "i-marca", "k-pub", "k-eng", "k-taxa", "k-aprov", "k-seg", "k-alvo", "g-dia", "limites", "t-tendencias"], seguidores: ["t-metas", "t-seguidores"],
+const PAGINAS = {comercial: ["c-fila", "c-pipeline", "c-funil"], eventos: ["t-eventos"], indicadores: ["t-kpis"], geral: ["i-rec", "i-conv", "i-inter", "i-impr", "i-seg10", "i-marca", "k-pub", "k-eng", "k-taxa", "k-aprov", "k-seg", "k-alvo", "g-dia", "limites", "t-tendencias"], seguidores: ["t-metas", "t-seguidores"],
   seguindo: ["sg-total", "sg-hoje", "sg-volta", "sg-fila", "t-seguindo", "t-seguindo-origem"],
   autoria: ["au-posts", "au-achados", "au-resp", "au-news", "t-autoria", "l-achados"],
   previsao: ["t-previsao"], engajamento: ["t-placar", "t-pilares", "en-conv", "en-vpa", "en-conversa", "en-vel", "en-ent", "en-rec", "t-engaj", "en-apoio"],
   alvos: ["a-resumo", "t-alvos", "t-lista", "t-maiores"], sobre: ["s-fluxo", "s-papeis", "s-protecoes", "s-numeros", "s-tecnica"],
   resultados: ["t-operacao", "g-hora", "t-grupo"], itens: ["t-itens"], pautas: ["ideias"], enxame: ["x-resumo", "x-mapa", "t-paises", "t-enxame", "t-coord", "t-eventos"]};
-const ROTULOS = {eventos: "Eventos em tempo real", indicadores: "Indicadores", enxame: "Enxame de agentes", sobre: "Como funciona", geral: "Visão geral", alvos: "Qualidade dos alvos", seguidores: "Seguidores", seguindo: "Seguindo", autoria: "Autoridade", engajamento: "Engajamento", previsao: "Previsão", resultados: "Resultados", itens: "Itens", pautas: "Pautas"};
+const ROTULOS = {comercial: "Comercial", eventos: "Eventos em tempo real", indicadores: "Indicadores", enxame: "Enxame de agentes", sobre: "Como funciona", geral: "Visão geral", alvos: "Qualidade dos alvos", seguidores: "Seguidores", seguindo: "Seguindo", autoria: "Autoridade", engajamento: "Engajamento", previsao: "Previsão", resultados: "Resultados", itens: "Itens", pautas: "Pautas"};
 let pg = "geral";
 function marcarPaginas() {
   const linha = document.querySelector(".row-cards");
@@ -708,7 +722,7 @@ function mostrarPagina() {
   document.querySelectorAll(".row-cards > [data-pg]").forEach(c => c.classList.toggle("d-none", c.dataset.pg !== pg));
   document.querySelectorAll("#paginas [data-pg]").forEach(a => { const on = a.dataset.pg === pg; a.classList.toggle("active", on); a.setAttribute("aria-selected", on); });
   document.getElementById("titulo-pagina").textContent = ROTULOS[pg];
-  document.querySelector(".filtros").classList.toggle("d-none", pg === "sobre" || pg === "enxame" || pg === "previsao");  // a explicação não depende de filtro
+  document.querySelector(".filtros").classList.toggle("d-none", pg === "sobre" || pg === "enxame" || pg === "previsao" || pg === "comercial");  // a explicação não depende de filtro
   document.querySelector("#paginas .active")?.scrollIntoView({inline: "center", block: "nearest"});  // a aba atual fica visível na faixa
   document.body.classList.toggle("pg-itens", pg === "itens");  // Itens mostra todos os filtros; nas outras abas ficam em "Mais filtros"
   scrollTo(0, 0);
@@ -1058,6 +1072,63 @@ function autoria(au) {
 
 
 // ---------- engajamento: indicadores que mudam decisões ----------
+// ---------- 21/11: Comercial (enxame Fase 0; só no painel do mini: tem nomes de pessoas) ----------
+const COM = {estados: [], timer: null};
+const TIPO_FILA = {conversa: ["Conversa parada", "azure"], momento: ["Hora de abordar", "orange"], retomada: ["Retomar", "yellow"]};
+function comercialIniciar() {
+  if (PUBLICO) { const it = document.getElementById("pg-comercial-item"); if (it) it.remove(); return; }
+  comercialCarregar(); COM.timer = setInterval(() => { if (pg === "comercial") comercialCarregar(); }, 60000);
+  document.getElementById("c-fila").addEventListener("click", async e => {
+    const b = e.target.closest("[data-fila]"); if (!b) return;
+    b.disabled = true;
+    try {
+      if (b.dataset.acao === "publicar") {
+        const txt = document.getElementById("c-txt-" + b.dataset.fila).value;
+        const r = await fetch(`/api/itens/${b.dataset.item}/aprovar`, {method: "POST", body: JSON.stringify({texto: txt})});
+        if (!r.ok) throw new Error(await r.text());
+      }
+      await fetch(`/api/fila/${b.dataset.fila}`, {method: "POST", body: JSON.stringify({como: b.dataset.acao})});
+      comercialCarregar();
+    } catch (err) { b.disabled = false; alert("Não deu: " + err.message); }
+  });
+  document.getElementById("c-pipeline").addEventListener("change", async e => {
+    const s = e.target.closest("select[data-chave]"); if (!s) return;
+    await fetch("/api/comercial/estado", {method: "POST", body: JSON.stringify({chave: s.dataset.chave, estado: s.value})});
+    comercialCarregar();
+  });
+}
+async function comercialCarregar() {
+  let d; try { d = await fetch("/api/comercial", {cache: "no-store"}).then(x => x.json()); } catch (e) { return; }
+  COM.estados = d.estados || [];
+  document.getElementById("pg-com-n").textContent = d.fila.length || "";
+  document.getElementById("c-fila-n").textContent = d.fila.length ? `${d.fila.length} em aberto` : "nada pendente";
+  document.getElementById("c-fila").innerHTML = d.fila.length ? d.fila.map(x => {
+    const [rot, cor] = TIPO_FILA[x.tipo] || [x.tipo, "secondary"];
+    const quando = new Date(x.criado * 1000).toLocaleString("pt-BR", {day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit"});
+    return `<div class="border rounded p-2 mb-2"><div class="d-flex flex-wrap gap-2 align-items-center"><span class="badge bg-${cor}-lt">${rot}</span>
+      <b>${esc(x.titulo)}</b><span class="text-secondary small ms-auto">${quando}</span></div>
+      ${x.porque ? `<div class="small text-secondary mt-1">Por que parou: ${esc(x.porque)}</div>` : ""}
+      ${x.texto ? `<div class="small mt-1">“${esc(x.texto)}”</div>` : ""}
+      ${x.rascunho ? `<textarea class="form-control form-control-sm mt-2" rows="3" id="c-txt-${x.id}">${esc(x.rascunho)}</textarea>` : ""}
+      <div class="d-flex flex-wrap gap-2 mt-2">${x.url ? `<a class="btn btn-sm" href="${esc(x.url)}" target="_blank" rel="noopener">Abrir</a>` : ""}
+      ${x.item_id && x.rascunho ? `<button class="btn btn-sm btn-primary" data-fila="${x.id}" data-item="${x.item_id}" data-acao="publicar">Publicar este texto</button>` : ""}
+      <button class="btn btn-sm" data-fila="${x.id}" data-acao="feito">Feito</button>
+      <button class="btn btn-sm btn-ghost-secondary" data-fila="${x.id}" data-acao="descartado">Descartar</button></div></div>`; }).join("")
+    : '<div class="text-secondary">Nada esperando por você.</div>';
+  document.getElementById("c-pipeline").innerHTML = d.pessoas.length ? d.pessoas.map(p => `<tr><td>${p.dossie && p.dossie.perfil ? `<a href="${esc(p.dossie.perfil)}" target="_blank" rel="noopener">${esc(p.autor)}</a>` : esc(p.autor)}</td>
+      <td>${esc(p.rede)}</td><td class="small text-secondary">${esc(p.motivo)}</td>
+      <td><select class="form-select form-select-sm" data-chave="${esc(p.chave)}">${COM.estados.map(e => `<option ${e === p.estado ? "selected" : ""}>${e}</option>`).join("")}</select></td></tr>`).join("")
+    : '<tr><td colspan="4" class="text-secondary">Ninguém no pipeline ainda: o agente avisa quando alguém chega à 3ª interação ou dá sinal comercial.</td></tr>';
+  const f = d.funil, c = f.conversao || {};
+  document.getElementById("c-funil").innerHTML = `<div class="mb-2"><b>${f.pessoas_que_conversaram}</b> pessoas conversaram com você</div>` +
+    COM.estados.map(e => `<div class="d-flex justify-content-between border-bottom py-1"><span>${e}</span><b>${f.por_estado[e] || 0}</b></div>`).join("") +
+    `<div class="small text-secondary mt-2">${Object.entries(c).map(([k, v]) => `${k}: ${v === null ? "–" : v + "%"}`).join(" · ")}</div>`;
+  const a = d.auditoria || {}, cal = a.calibracao || {};
+  document.getElementById("c-auditoria").innerHTML = (a.alertas && a.alertas.length ? `<ul class="mb-2 ps-3">${a.alertas.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : '<div class="mb-2 text-secondary">Sem alertas.</div>') +
+    (cal.ece !== undefined && cal.ece !== null ? `<div>Calibração do juiz: erro médio de <b>${cal.ece}</b> pontos em ${cal.amostra} comentários (Brier ${cal.brier}).</div>` : "") +
+    (a.dia ? `<div class="text-secondary">auditado em ${esc(a.dia)}</div>` : "");
+}
+
 // ---------- 20/11: eventos em tempo real (só no painel do mini: o log tem nomes e links) ----------
 const EV = {pos: null, linhas: [], pausa: false, tipos: new Set(), timer: null};
 const EV_TIPOS = {erro: ["Erros", "red"], publicado: ["Publicado", "green"], conversa: ["Conversas", "azure"], sessao: ["Sessões", "purple"],
@@ -1407,7 +1478,12 @@ const EVENTO = {posts_achados: "achou posts", posts_aprovados: "aprovou posts", 
   reprovado: "reprovou o texto", publicado: "publicou", curtida: "curtiu", falha_publicar: "falhou ao publicar", resposta_recebida: "recebeu resposta",
   respondido: "respondeu", medido: "mediu", prioridades: "definiu prioridades", temas_do_dia: "leu os temas do dia", circulo_refeito: "refez o círculo",
   interacoes_lidas: "leu interações", post_escrito: "escreveu post próprio", post_publicado: "publicou post próprio", teste_decidido: "fechou um teste",
-  lead: "achou um lead", achadas: "achou oportunidades", rede_pausada: "pausou a rede", painel_publicado: "publicou o painel", relatorio_semanal: "enviou o relatório"};
+  lead: "achou um lead", achadas: "achou oportunidades", rede_pausada: "pausou a rede", painel_publicado: "publicou o painel", relatorio_semanal: "enviou o relatório",
+  atuou: "atuou", entrou: "pôs na sua fila", resolvido: "você resolveu", levou_ao_dono: "levou a conversa até você", montado: "montou o dossiê",
+  hora_de_abordar: "avisou a hora de abordar", lembrete: "lembrou de retomar", calculado: "calculou o funil", morno: "marcou como morno",
+  abordado: "marcou abordado", conversa: "marcou em conversa", proposta: "marcou proposta", fechado: "marcou fechado", perdido: "marcou perdido",
+  auditou: "auditou", calibrou: "calibrou o juiz", bloqueou: "barrou o painel público", liberou: "liberou o painel público", mediu: "mediu",
+  reserva_ativa: "ligou o modelo reserva", router_voltou: "voltou ao router", fila_parada: "achou a fila parada", alcance_caindo: "freou por alcance"};
 let gMapa = null;
 function mapaMundi() {  // desenha só com a aba visível (escondido, o mapa fica sem tamanho)
   const m = dados && dados.mapa, el = document.getElementById("x-mapa");
@@ -1434,7 +1510,7 @@ function enxame(x) {
   document.getElementById("pg-enxame-n").textContent = x.total;
   const hora = t => t ? new Date(t * 1000).toLocaleTimeString("pt-BR", {hour: "2-digit", minute: "2-digit"}) : "–";
   const pausadas = Object.values((dados.limites) || {}).filter(v => v.pausada_ate).length;
-  document.getElementById("x-resumo").innerHTML = [["Agentes", x.total, "14 redes × 7 funções + 9 coordenadores"], ["Ativos hoje", x.ativos_hoje, "registraram ao menos uma ação"],
+  document.getElementById("x-resumo").innerHTML = [["Agentes", x.total, `14 redes × ${x.funcoes.length} funções + ${x.coordenadores.length} coordenadores`], ["Ativos hoje", x.ativos_hoje, "registraram ao menos uma ação"],
     ["Ações hoje", num(x.eventos_hoje), "eventos no quadro"], ["Redes pausadas", pausadas, "pelo Guardião ou por alerta da rede"]]
     .map(([t, v, sub]) => `<div class="col-6 col-lg-3"><div class="subheader">${t}</div><div class="h1 mb-0">${v}</div><div class="text-secondary small mt-1">${sub}</div></div>`).join("");
   const por = {}; x.agentes.forEach(a => por[a.id] = a);
@@ -1444,8 +1520,12 @@ function enxame(x) {
     return `<tr><td class="text-start text-nowrap" data-ir="itens" data-rede="${r}" style="cursor:pointer" title="Ver os itens desta rede">${ponto(r)}${nome(r)}</td>` + x.funcoes.map(f => { const a = por[r + "." + f.id] || {};
       return `<td title="${a.evento ? esc((EVENTO[a.evento] || a.evento) + " às " + hora(a.ultimo)) : "ainda não agiu hoje"}">${a.vezes ? `<span class="badge bg-green-lt">${num(a.total || a.vezes)}</span>` : '<span class="text-secondary">·</span>'}</td>`; }).join("")
       + `<td>${b === undefined ? '<span class="text-secondary" title="sem amostra: vale o piso diário">–</span>' : `<span class="${b > 0 ? "text-green" : b < 0 ? "text-red" : "text-secondary"}">${b > 0 ? "+" : ""}${b}</span>`}</td></tr>`; }).join("");
+  let grupoAnt = null;  // 21/11: 60 coordenadores em 9 enxames (PLANO-enxame-200.md); "(Fase 1)"/"(Fase 2)" = ainda desligado
   document.getElementById("t-coord").innerHTML = x.coordenadores.map(c => { const a = por[c.id] || {};
-    return `<tr><td class="fw-bold">${c.nome}</td><td class="text-secondary small">${esc(c.faz)}</td><td class="text-end">${a.vezes || '<span class="text-secondary">·</span>'}</td>
+    const cab = c.grupo && c.grupo !== grupoAnt ? `<tr class="bg-light"><td colspan="4" class="fw-bold text-uppercase small text-secondary pt-3">${esc(c.grupo)}</td></tr>` : "";
+    grupoAnt = c.grupo;
+    const fase = /\(Fase \d\)/.test(c.faz) ? ' <span class="badge bg-secondary-lt">' + c.faz.match(/Fase \d/)[0] + "</span>" : "";
+    return cab + `<tr><td class="fw-bold">${c.nome}${fase}</td><td class="text-secondary small">${esc(c.faz)}</td><td class="text-end">${a.vezes || '<span class="text-secondary">·</span>'}</td>
       <td class="small">${a.evento ? esc(EVENTO[a.evento] || a.evento) + ` <span class="text-secondary">${hora(a.ultimo)}</span>` : '<span class="text-secondary">–</span>'}</td></tr>`; }).join("");
   const rot = id => { const [r, f] = id.split("."); if (!f) return (x.coordenadores.find(c => c.id === id) || {}).nome || id;
     return `${(x.funcoes.find(k => k.id === f) || {}).nome || f} · ${nome(r)}`; };
@@ -1619,6 +1699,7 @@ async function carregar() {
 
 lerHash(); marcarPaginas(); ligarAbas(); montarControles(); sincronizarControles(); mostrarPagina();
 eventosIniciar();  // 20/11: aba Eventos (só no painel do mini)
+comercialIniciar();  // 21/11: aba Comercial (só no painel do mini)
 addEventListener("hashchange", () => { lerHash(); aplicar(); mostrarPagina(); });
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", e => {
   document.documentElement.setAttribute("data-bs-theme", e.matches ? "dark" : "light");
