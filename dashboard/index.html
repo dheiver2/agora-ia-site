@@ -1081,7 +1081,7 @@ function autoria(au) {
 // ---------- engajamento: indicadores que mudam decisões ----------
 // ---------- 21/11: Comercial (enxame Fase 0; só no painel do mini: tem nomes de pessoas) ----------
 const COM = {estados: [], timer: null};
-const TIPO_FILA = {conversa: ["Conversa parada", "azure"], momento: ["Hora de abordar", "orange"], retomada: ["Retomar", "yellow"]};
+const TIPO_FILA = {conversa: ["Conversa parada", "azure"], momento: ["Hora de abordar", "orange"], retomada: ["Retomar", "yellow"], post: ["Post do dia", "purple"]};
 function comercialIniciar() {
   if (PUBLICO) { const it = document.getElementById("pg-comercial-item"); if (it) it.remove(); return; }
   comercialCarregar(); COM.timer = setInterval(() => { if (pg === "comercial") comercialCarregar(); }, 60000);
