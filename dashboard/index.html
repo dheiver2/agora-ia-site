@@ -174,9 +174,14 @@
         <div class="row row-deck row-cards">
 
           <!-- 21/11: enxame Fase 0 — fila do dono, pipeline, funil e auditores (/api/comercial); só no painel do mini -->
-          <div class="col-12"><div class="card"><div class="card-header"><h3 class="card-title">Para você resolver</h3>
+          <!-- 23/11 (dono: "seja mais autônomo"): o agente resolve sozinho e só mostra o que decidiu -->
+          <div class="col-12"><div class="card"><div class="card-header"><h3 class="card-title">O que o agente resolveu sozinho · 48 h</h3>
+            <div class="card-actions text-secondary small" id="c-dec-n">–</div></div>
+            <div class="table-responsive" style="max-height:45vh;overflow:auto"><table class="table table-sm table-vcenter"><thead><tr><th>Quando</th><th>O quê</th><th>Decisão</th></tr></thead>
+            <tbody id="c-decisoes"></tbody></table></div></div></div>
+          <div class="col-12 d-none" id="c-fila-card"><div class="card"><div class="card-header"><h3 class="card-title">Ainda na fila antiga</h3>
             <div class="card-actions text-secondary small" id="c-fila-n">–</div></div>
-            <div class="card-body" style="max-height:55vh;overflow:auto"><div id="c-fila"></div></div></div></div>
+            <div class="card-body" style="max-height:40vh;overflow:auto"><div id="c-fila"></div></div></div></div>
           <div class="col-lg-7"><div class="card"><div class="card-header"><h3 class="card-title">Pipeline</h3>
             <div class="card-actions text-secondary small">o agente põe em morno e lead; o resto é você quem marca</div></div>
             <div class="table-responsive"><table class="table table-sm table-vcenter"><thead><tr><th>Pessoa</th><th>Rede</th><th>Por quê</th><th>Etapa</th></tr></thead>
@@ -185,6 +190,10 @@
             <div class="card-body" id="c-funil"></div>
             <div class="card-header"><h3 class="card-title">Auditores</h3></div>
             <div class="card-body small" id="c-auditoria"></div></div></div>
+          <!-- 22/11: A5 (PLANO-acao-22-11-noite.md) — você julga o que o critério 'seguro' barrou -->
+          <div class="col-12"><div class="card"><div class="card-header"><h3 class="card-title">A verificação barrou à toa? (julgado por outro modelo)</h3>
+            <div class="card-actions text-secondary small" id="c-seguro-n">–</div></div>
+            <div class="card-body" style="max-height:55vh;overflow:auto"><div id="c-seguro"></div></div></div></div>
 
           <!-- 20/11: eventos em tempo real (agente.log via /api/eventos); só no painel do mini -->
           <div class="col-12"><div class="card"><div class="card-header flex-wrap gap-2"><h3 class="card-title">Eventos em tempo real</h3>
@@ -1081,7 +1090,7 @@ function autoria(au) {
 // ---------- engajamento: indicadores que mudam decisões ----------
 // ---------- 21/11: Comercial (enxame Fase 0; só no painel do mini: tem nomes de pessoas) ----------
 const COM = {estados: [], timer: null};
-const TIPO_FILA = {conversa: ["Conversa parada", "azure"], momento: ["Hora de abordar", "orange"], retomada: ["Retomar", "yellow"], post: ["Post do dia", "purple"]};
+const TIPO_FILA = {conversa: ["Conversa parada", "azure"], momento: ["Hora de abordar", "orange"], retomada: ["Retomar", "yellow"], post: ["Post para aprovar", "purple"], pauta: ["Pauta da semana", "teal"]};
 function comercialIniciar() {
   if (PUBLICO) { const it = document.getElementById("pg-comercial-item"); if (it) it.remove(); return; }
   comercialCarregar(); COM.timer = setInterval(() => { if (pg === "comercial") comercialCarregar(); }, 60000);
@@ -1091,12 +1100,19 @@ function comercialIniciar() {
     try {
       if (b.dataset.acao === "publicar") {
         const txt = document.getElementById("c-txt-" + b.dataset.fila).value;
-        const r = await fetch(`/api/itens/${b.dataset.item}/aprovar`, {method: "POST", body: JSON.stringify({texto: txt})});
+        const rota = b.dataset.post ? "publicar-post" : "aprovar";  // 22/11: post próprio (oferta, quem sou) sai pelo caminho do Autor
+        const r = await fetch(`/api/itens/${b.dataset.item}/${rota}`, {method: "POST", body: JSON.stringify({texto: txt})});
         if (!r.ok) throw new Error(await r.text());
       }
       await fetch(`/api/fila/${b.dataset.fila}`, {method: "POST", body: JSON.stringify({como: b.dataset.acao})});
       comercialCarregar();
     } catch (err) { b.disabled = false; alert("Não deu: " + err.message); }
+  });
+  document.getElementById("c-seguro").addEventListener("click", async e => {
+    const b = e.target.closest("button[data-seguro]"); if (!b) return;
+    b.disabled = true;
+    try { const r = await fetch(`/api/seguro/${b.dataset.seguro}`, {method: "POST", body: JSON.stringify({veredito: b.dataset.v})}); if (!r.ok) throw new Error(await r.text()); comercialCarregar(); }
+    catch (err) { b.disabled = false; alert("Não deu: " + err.message); }
   });
   document.getElementById("c-pipeline").addEventListener("change", async e => {
     const s = e.target.closest("select[data-chave]"); if (!s) return;
@@ -1109,6 +1125,12 @@ async function comercialCarregar() {
   COM.estados = d.estados || [];
   document.getElementById("pg-com-n").textContent = d.fila.length || "";
   document.getElementById("c-fila-n").textContent = d.fila.length ? `${d.fila.length} em aberto` : "nada pendente";
+  document.getElementById("c-fila-card").classList.toggle("d-none", !d.fila.length);
+  const dec = d.decisoes || [];
+  document.getElementById("c-dec-n").textContent = `${dec.length} decisões`;
+  document.getElementById("c-decisoes").innerHTML = dec.length ? dec.map(x => `<tr><td class="text-nowrap small text-secondary">${new Date(x.quando * 1000).toLocaleString("pt-BR", {day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit"})}</td>
+      <td><span class="badge bg-secondary-lt me-1">${esc(x.tipo)}</span>${esc(x.titulo)}</td><td class="small">${esc(x.como)}</td></tr>`).join("")
+    : '<tr><td colspan="3" class="text-secondary">Nenhuma decisão nas últimas 48 h.</td></tr>';
   document.getElementById("c-fila").innerHTML = d.fila.length ? d.fila.map(x => {
     const [rot, cor] = TIPO_FILA[x.tipo] || [x.tipo, "secondary"];
     const quando = new Date(x.criado * 1000).toLocaleString("pt-BR", {day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit"});
@@ -1118,7 +1140,7 @@ async function comercialCarregar() {
       ${x.texto ? `<div class="small mt-1">“${esc(x.texto)}”</div>` : ""}
       ${x.rascunho ? `<textarea class="form-control form-control-sm mt-2" rows="3" id="c-txt-${x.id}">${esc(x.rascunho)}</textarea>` : ""}
       <div class="d-flex flex-wrap gap-2 mt-2">${x.url ? `<a class="btn btn-sm" href="${esc(x.url)}" target="_blank" rel="noopener">Abrir</a>` : ""}
-      ${x.item_id && x.rascunho ? `<button class="btn btn-sm btn-primary" data-fila="${x.id}" data-item="${x.item_id}" data-acao="publicar">Publicar este texto</button>` : ""}
+      ${x.item_id && x.rascunho ? `<button class="btn btn-sm btn-primary" data-fila="${x.id}" data-item="${x.item_id}" data-acao="publicar" ${x.tipo === "post" ? 'data-post="1"' : ""}>Publicar este texto</button>` : ""}
       <button class="btn btn-sm" data-fila="${x.id}" data-acao="feito">Feito</button>
       <button class="btn btn-sm btn-ghost-secondary" data-fila="${x.id}" data-acao="descartado">Descartar</button></div></div>`; }).join("")
     : '<div class="text-secondary">Nada esperando por você.</div>';
@@ -1134,6 +1156,15 @@ async function comercialCarregar() {
   document.getElementById("c-auditoria").innerHTML = (a.alertas && a.alertas.length ? `<ul class="mb-2 ps-3">${a.alertas.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : '<div class="mb-2 text-secondary">Sem alertas.</div>') +
     (cal.ece !== undefined && cal.ece !== null ? `<div>Calibração do juiz: erro médio de <b>${cal.ece}</b> pontos em ${cal.amostra} comentários (Brier ${cal.brier}).</div>` : "") +
     (a.dia ? `<div class="text-secondary">auditado em ${esc(a.dia)}</div>` : "");
+  const sg = d.seguro || {pendentes: [], marcados: 0, meta: 30};
+  document.getElementById("c-seguro-n").textContent = `${sg.marcados} de ${sg.meta} marcados` + Object.entries(sg.por_criterio || {}).map(([c, v]) => ` · ${c}: ${v.pct_toa}% à toa em ${v.marcados}`).join("");
+  const sgl = sg.recentes || sg.pendentes;
+  document.getElementById("c-seguro").innerHTML = sgl.length ? sgl.map(x => `<div class="border rounded p-2 mb-2">
+      <div class="d-flex flex-wrap gap-2 align-items-center"><span class="badge bg-secondary-lt">${esc(nome(x.rede))}</span><span class="badge bg-orange-lt">barrado por: ${esc(x.criterio || "seguro")}</span><span class="text-secondary small">${esc(x.dia)}</span>
+      ${x.url ? `<a class="small ms-auto" href="${esc(x.url)}" target="_blank" rel="noopener">abrir o post</a>` : ""}</div>
+      <div class="small text-secondary mt-1">Post: ${esc(x.post)}</div><div class="small mt-1"><b>Comentário barrado:</b> ${esc(x.rascunho)}</div>${x.motivo ? `<div class="small text-secondary mt-1">Por quê: ${esc(x.motivo)}</div>` : ""}
+      <div class="small mt-2">${x.veredito ? `<span class="badge bg-${x.veredito === "toa" ? "red" : "green"}-lt">${x.veredito === "toa" ? "barrou à toa" : "barrou certo"}</span> <span class="text-secondary">${x.por === "modelo" ? "modelo técnico" : "você"}${x.razao ? ": " + esc(x.razao) : ""}</span>` : '<span class="text-secondary">o modelo técnico julga na próxima rodada diária</span>'}</div></div>`).join("")
+    : '<div class="text-secondary">Nada para julgar agora: a amostra do dia sai na rodada das 07h (até 5 barrados só pelo \'seguro\' e 5 só pelo revisor).</div>';
 }
 
 // ---------- 20/11: eventos em tempo real (só no painel do mini: o log tem nomes e links) ----------
@@ -1182,15 +1213,15 @@ function eventosDesenhar() {
       <span class="${l.tipo === "erro" ? "text-red" : ""}" style="word-break:break-word">${esc(l.texto)}</span></div>`;
   }).join("") || '<div class="text-secondary">Nenhum evento com esses filtros.</div>';
 }
-function kpisPainel(k, reator) {  // 20/11: indicadores com seta (kpis.py) e as ações do Reator para os que caem ou zeram
+function kpisPainel(k, reator, bombeiro) {  // 20/11: indicadores com seta (kpis.py) e as ações do Reator para os que caem ou zeram; 24/11: e as do Bombeiro (operação)
   const el = document.getElementById("t-kpis");
-  const ativas = (reator || {}).ativas || [], porChave = {};
+  const ativas = [ ...((reator || {}).ativas || []), ...(((bombeiro || {}).ativas || []).map(a => ({ ...a, tipo: a.tipo || "operação" }))) ], porChave = {};
   ativas.forEach(a => { if (a.chave) porChave[a.chave] = a; });
   const la = document.getElementById("kpis-acoes");
   if (la) la.innerHTML = ativas.map(a => `<div class="list-group-item px-0 py-2"><div class="d-flex gap-2 align-items-start">
-      <span class="badge ${a.tipo === "zerado" ? "bg-orange-lt" : "bg-red-lt"} text-nowrap">${a.tipo === "zerado" ? "zerado" : "caindo"}</span>
+      <span class="badge ${a.tipo === "zerado" ? "bg-orange-lt" : a.tipo === "operação" ? "bg-blue-lt" : "bg-red-lt"} text-nowrap">${a.tipo === "zerado" ? "zerado" : a.tipo === "operação" ? "operação" : "caindo"}</span>
       <div><div class="fw-bold">${esc(a.acao)}</div><div class="text-secondary small">${esc(a.motivo)}${a.desde ? " · desde " + esc(a.desde.slice(8, 10) + "/" + a.desde.slice(5, 7)) : ""}</div></div></div></div>`).join("")
-    || '<div class="text-secondary small py-2">Nenhuma ação em curso: nenhum indicador caindo ou zerado na última leitura (1× por dia).</div>';
+    || '<div class="text-secondary small py-2">Nenhuma ação em curso: nenhum indicador caindo ou zerado e nenhuma operação precisando de socorro.</div>';
   if (!el) return;
   if (!k || !k.itens) { el.innerHTML = '<div class="text-secondary">Indicadores ainda não calculados.</div>'; return; }
   const fmt = (v, u) => v === null || v === undefined ? "–" : (Number.isInteger(v) ? num(v) : String(v).replace(".", ",")) + (u === "%" ? "%" : u === "h" ? " h" : "");
@@ -1560,7 +1591,7 @@ function boletim(b) {
     const seta = a.bom === null ? "" : `<span class="${a.bom ? "text-green" : "text-red"}">${a.valor > a.anterior ? "▲" : "▼"}</span> `;
     return `<tr><td class="fw-bold text-nowrap">${esc(quem)}</td><td class="small text-secondary">${esc(a.grupo)}</td>
       <td class="text-end">${a.acoes}<div class="small text-secondary">antes ${a.acoes_ant}</div></td><td class="small">${esc(a.indicador)}</td>
-      <td class="text-end text-nowrap">${seta}${n(a.anterior)} → ${n(a.valor)}</td><td><span class="badge bg-${cor}-lt" title="${esc(dica)}">${esc(a.situacao)}</span></td></tr>`; }).join("")
+      <td class="text-end text-nowrap">${seta}${n(a.anterior)} → ${n(a.valor)}</td><td><span class="badge bg-${cor}-lt" title="${esc(dica)}">${esc(a.situacao)}</span>${a.amostra !== null && a.amostra !== undefined && a.amostra < 10 ? `<div class="small text-secondary" title="menos de 10 publicações num dos períodos: a variação é ruído">amostra pequena (${a.amostra})</div>` : ""}</td></tr>`; }).join("")
     || '<tr><td colspan="6" class="text-secondary">Nenhum agente nesta situação.</td></tr>';
 }
 document.addEventListener("click", e => { const b = e.target.closest("[data-bol]"); if (!b) return; BOL.filtro = b.dataset.bol; boletim(BOL.dados); });
@@ -1706,7 +1737,7 @@ function aplicar() {
   const comparar = F.p < 90 && filtrados(1, false).length > 0;  // sem dado no período anterior a seta só repetiria o total
   kpis(filtrados(0), comparar ? filtrados(1) : [], filtrados(0, false), comparar ? filtrados(1, false) : [], comparar);
   graficoDia(filtrados(0)); graficoHora(filtrados(0));
-  limites(dados.limites || {}); indicadores(dados.indicadores); tendencias(dados.tendencias); enxame(dados.enxame); seguidores(dados.seguidores || []); metas(dados.seguidores || [], filtrados(0, false)); previsao(); seguindo(dados.seguindo, dados.seguidores || []); autoria(dados.autoria); placar(dados.placar); kpisPainel(dados.kpis, (dados.indicadores || {}).reator); engajamento(dados.seguidores || []); alvos(filtrados(0, false)); grupo(); tabela();
+  limites(dados.limites || {}); indicadores(dados.indicadores); tendencias(dados.tendencias); enxame(dados.enxame); seguidores(dados.seguidores || []); metas(dados.seguidores || [], filtrados(0, false)); previsao(); seguindo(dados.seguindo, dados.seguidores || []); autoria(dados.autoria); placar(dados.placar); kpisPainel(dados.kpis, (dados.indicadores || {}).reator, (dados.indicadores || {}).bombeiro); engajamento(dados.seguidores || []); alvos(filtrados(0, false)); grupo(); tabela();
 }
 async function carregar() {
   try {
