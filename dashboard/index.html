@@ -692,6 +692,11 @@ const dia = t => { const d = new Date(t * 1000); return d.getFullYear() + "-" + 
 const PUBLICO = /\.github\.io$/.test(location.hostname) || new URLSearchParams(location.search).has("publico");  // 11/11: no Mac mini (192.168.15.27) e na rede local, dados ao vivo da API
 const escuro = () => document.documentElement.getAttribute("data-bs-theme") === "dark";
 if (PUBLICO) document.getElementById("link-painel").remove();
+// 25/11: cards que só existem no painel do mini (dados de /api/comercial e do agente.log) não ficam vazios no público
+if (PUBLICO) for (const id of ["c-decisoes", "c-pipeline", "c-funil", "ev-linhas"]) {
+  const el = document.getElementById(id); const card = el && el.closest(".card");
+  if (card && card.parentElement) card.parentElement.remove();
+}
 
 let dados = null, gDia = null, gHora = null, campo = "rede", ordem = ["quando", -1], pagina = 0;
 let POR_PAGINA = 10;
