@@ -1242,7 +1242,7 @@ function kpisPainel(k, reator, bombeiro) {  // 20/11: indicadores com seta (kpis
   ativas.forEach(a => { if (a.chave) porChave[a.chave] = a; });
   const la = document.getElementById("kpis-acoes");
   if (la) la.innerHTML = ativas.map(a => `<div class="list-group-item px-0 py-2"><div class="d-flex gap-2 align-items-start">
-      <span class="badge ${a.tipo === "zerado" ? "bg-orange-lt" : a.tipo === "operação" ? "bg-blue-lt" : "bg-red-lt"} text-nowrap">${a.tipo === "zerado" ? "zerado" : a.tipo === "operação" ? "operação" : "caindo"}</span>
+      <span class="badge ${a.tipo === "zerado" ? "bg-orange-lt" : a.tipo === "meta" ? "bg-orange-lt" : a.tipo === "operação" ? "bg-blue-lt" : "bg-red-lt"} text-nowrap">${a.tipo === "zerado" ? "zerado" : a.tipo === "meta" ? "abaixo da meta" : a.tipo === "operação" ? "operação" : "caindo"}</span>
       <div><div class="fw-bold">${esc(a.acao)}</div><div class="text-secondary small">${esc(a.motivo)}${a.desde ? " · desde " + esc(a.desde.slice(8, 10) + "/" + a.desde.slice(5, 7)) : ""}</div></div></div></div>`).join("")
     || '<div class="text-secondary small py-2">Nenhuma ação em curso: nenhum indicador caindo ou zerado e nenhuma operação precisando de socorro.</div>';
   if (!el) return;
