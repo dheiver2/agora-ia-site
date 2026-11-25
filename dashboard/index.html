@@ -182,6 +182,10 @@
           <div class="col-12 d-none" id="c-fila-card"><div class="card"><div class="card-header"><h3 class="card-title">Ainda na fila antiga</h3>
             <div class="card-actions text-secondary small" id="c-fila-n">–</div></div>
             <div class="card-body" style="max-height:40vh;overflow:auto"><div id="c-fila"></div></div></div></div>
+          <!-- 25/11: caixa de DMs por rede (dm_caixa.py lê a cada 60 min; o agente não responde DM, só achega para você) -->
+          <div class="col-12"><div class="card"><div class="card-header"><h3 class="card-title">Caixa de DMs</h3>
+            <div class="card-actions text-secondary small" id="dm-caixa-meta">–</div></div>
+            <div class="card-body"><div class="d-flex flex-wrap gap-2" id="dm-caixa"></div></div></div></div>
           <div class="col-lg-7"><div class="card"><div class="card-header"><h3 class="card-title">Pipeline</h3>
             <div class="card-actions text-secondary small">o agente põe em morno e lead; o resto é você quem marca</div></div>
             <div class="table-responsive"><table class="table table-sm table-vcenter"><thead><tr><th>Pessoa</th><th>Rede</th><th>Por quê</th><th>Etapa</th></tr></thead>
@@ -1213,6 +1217,20 @@ function eventosDesenhar() {
       <span class="${l.tipo === "erro" ? "text-red" : ""}" style="word-break:break-word">${esc(l.texto)}</span></div>`;
   }).join("") || '<div class="text-secondary">Nenhum evento com esses filtros.</div>';
 }
+function caixaDM(dm) {  // 25/11: caixa de entrada por rede (dm_caixa.py lê a cada 60 min; responder é papel do dono)
+  const el = document.getElementById("dm-caixa");
+  if (!el) return;
+  const m = document.getElementById("dm-caixa-meta");
+  if (!dm || !dm.redes) { el.innerHTML = '<div class="text-secondary small py-2">–</div>'; return; }
+  el.innerHTML = dm.redes.map(r => {
+    const cheio = r.n > 0, quem = (r.quem || []).slice(0, 3).join(", ");
+    return `<a href="${r.url}" target="_blank" rel="noopener" class="chip ${cheio ? "" : "off"}" ${cheio ? "" : 'tabindex="-1"'}>
+      <span class="ponto" style="background:${cheio ? "#E94A12" : "transparent"}"></span>${esc(r.nome)} ${cheio ? `<b>${r.n}</b>` : "0"}${quem ? ` · ${esc(quem)}` : ""}</a>`;
+  }).join("");
+  const ult = dm.ultima_leitura ? new Date(dm.ultima_leitura * 1000).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : "–";
+  if (m) m.textContent = `${dm.nao_lidas ?? "–"} não lida(s) · lida às ${ult} · 1× por hora · o agente não responde DM: ele só traz o pedido até você`;
+}
+
 function kpisPainel(k, reator, bombeiro) {  // 20/11: indicadores com seta (kpis.py) e as ações do Reator para os que caem ou zeram; 24/11: e as do Bombeiro (operação)
   const el = document.getElementById("t-kpis");
   const ativas = [ ...((reator || {}).ativas || []), ...(((bombeiro || {}).ativas || []).map(a => ({ ...a, tipo: a.tipo || "operação" }))) ], porChave = {};
@@ -1737,7 +1755,7 @@ function aplicar() {
   const comparar = F.p < 90 && filtrados(1, false).length > 0;  // sem dado no período anterior a seta só repetiria o total
   kpis(filtrados(0), comparar ? filtrados(1) : [], filtrados(0, false), comparar ? filtrados(1, false) : [], comparar);
   graficoDia(filtrados(0)); graficoHora(filtrados(0));
-  limites(dados.limites || {}); indicadores(dados.indicadores); tendencias(dados.tendencias); enxame(dados.enxame); seguidores(dados.seguidores || []); metas(dados.seguidores || [], filtrados(0, false)); previsao(); seguindo(dados.seguindo, dados.seguidores || []); autoria(dados.autoria); placar(dados.placar); kpisPainel(dados.kpis, (dados.indicadores || {}).reator, (dados.indicadores || {}).bombeiro); engajamento(dados.seguidores || []); alvos(filtrados(0, false)); grupo(); tabela();
+  limites(dados.limites || {}); indicadores(dados.indicadores); tendencias(dados.tendencias); enxame(dados.enxame); seguidores(dados.seguidores || []); metas(dados.seguidores || [], filtrados(0, false)); previsao(); seguindo(dados.seguindo, dados.seguidores || []); autoria(dados.autoria); placar(dados.placar); kpisPainel(dados.kpis, (dados.indicadores || {}).reator, (dados.indicadores || {}).bombeiro); caixaDM(dados.dm); engajamento(dados.seguidores || []); alvos(filtrados(0, false)); grupo(); tabela();
 }
 async function carregar() {
   try {
