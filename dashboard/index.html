@@ -94,7 +94,9 @@
   .card-header { border-bottom: 1px solid var(--pm-line); background: transparent; padding-top: .9rem; padding-bottom: .9rem; }
   .card-title { font-size: .95rem; font-weight: 650; letter-spacing: -.01em; }
   .card-footer { background: transparent; border-top: 1px solid var(--pm-line); }
-  .subheader { color: var(--pm-muted); font-weight: 600; letter-spacing: .07em; text-transform: uppercase; }
+  .subheader { color: var(--pm-muted); font-weight: 600; letter-spacing: 0; text-transform: none; font-size: .75rem; }
+  .card .subheader.text-truncate, .card .subheader { white-space: normal; overflow: visible; display: -webkit-box; -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical; overflow: hidden; min-height: 2.4em; }
   .h1, .h2, .display-6 { font-weight: 750; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
   .kpi-delta { border-radius: 999px; padding: .1rem .45rem; background: rgba(var(--tblr-primary-rgb), .07); }
   #paginas { gap: .25rem; background: color-mix(in srgb, var(--pm-surface) 70%, transparent); border: 1px solid var(--pm-line);
